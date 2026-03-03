@@ -4,15 +4,35 @@
 -- Dieses Script im Supabase SQL Editor ausfuehren
 -- Kann mehrfach ausgefuehrt werden (loescht alte Tabellen)
 
--- Alte Tabellen entfernen (in richtiger Reihenfolge wegen Foreign Keys)
+-- Alte Storage-Objekte und Bucket loeschen
+DELETE FROM storage.objects WHERE bucket_id = 'attachments';
+DELETE FROM storage.buckets WHERE id = 'attachments';
+
+-- Alte Policies loeschen (ignoriert Fehler wenn nicht vorhanden)
+DROP POLICY IF EXISTS "anon read participants" ON participants;
+DROP POLICY IF EXISTS "anon insert participants" ON participants;
+DROP POLICY IF EXISTS "anon update participants" ON participants;
+DROP POLICY IF EXISTS "anon delete participants" ON participants;
+DROP POLICY IF EXISTS "anon read protocols" ON protocols;
+DROP POLICY IF EXISTS "anon insert protocols" ON protocols;
+DROP POLICY IF EXISTS "anon update protocols" ON protocols;
+DROP POLICY IF EXISTS "anon read attendance" ON attendance;
+DROP POLICY IF EXISTS "anon insert attendance" ON attendance;
+DROP POLICY IF EXISTS "anon update attendance" ON attendance;
+DROP POLICY IF EXISTS "anon read entries" ON entries;
+DROP POLICY IF EXISTS "anon insert entries" ON entries;
+DROP POLICY IF EXISTS "anon update entries" ON entries;
+DROP POLICY IF EXISTS "anon delete entries" ON entries;
+DROP POLICY IF EXISTS "anon read attachments" ON attachments;
+DROP POLICY IF EXISTS "anon insert attachments" ON attachments;
+DROP POLICY IF EXISTS "anon delete attachments" ON attachments;
+
+-- Alte Tabellen entfernen
 DROP TABLE IF EXISTS attachments CASCADE;
 DROP TABLE IF EXISTS entries CASCADE;
 DROP TABLE IF EXISTS attendance CASCADE;
 DROP TABLE IF EXISTS protocols CASCADE;
 DROP TABLE IF EXISTS participants CASCADE;
-
--- Storage Bucket loeschen falls vorhanden
-DELETE FROM storage.buckets WHERE id = 'attachments';
 
 -- Alte Funktionen loeschen
 DROP FUNCTION IF EXISTS create_weekly_protocol();
