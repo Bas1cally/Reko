@@ -1,0 +1,138 @@
+{% extends "base.html" %}
+{% block title %}{{ protocol.label }} — Reko-Protokoll{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div class="page-header-left">
+        <h1>{{ protocol.label }}</h1>
+        <p class="page-subtitle">
+            {{ protocol.week_start.strftime('%d.%m.%Y') }} — {{ protocol.week_end.strftime('%d.%m.%Y') }}
+        </p>
+    </div>
+    <div class="page-header-right">
+        {% if protocol.status == 'active' %}
+            <span class="badge badge-active">Aktiv</span>
+            <form method="POST" action="{{ url_for('manual_archive') }}" class="inline-form"
+                  onsubmit="return confirm('Protokoll jetzt archivieren und neue Woche starten?')">
+                <button type="submit" class="btn btn-small btn-outline">Jetzt archivieren</button>
+            </form>
+        {% else %}
+            <span class="badge badge-archived">Archiviert</span>
+            {% if protocol.pdf_path %}
+            <a href="{{ url_for('download_pdf', protocol_id=protocol.id) }}" class="btn btn-small btn-outline">PDF herunterladen</a>
+            {% endif %}
+        {% endif %}
+    </div>
+</div>
+
+<!-- Ablauf -->
+<section class="card">
+    <h2>Ablauf</h2>
+    <ol class="ablauf-list">
+        <li>Bericht des Bereichsbetriebsrates (wenn anwesend)</li>
+        <li>Berichte aller Anwesenden nacheinander ("Blitzlicht")</li>
+        <li>Bericht Ltd. Werksarzt aus anderen Terminen (HR-Reko, MT-H, etc.)</li>
+        <li>Sonstiges</li>
+    </ol>
+</section>
+
+<!-- Anwesenheit -->
+<section class="card">
+    <h2>Anwesenheit</h2>
+    {% for category, participants in participants_by_cat.items() %}
+    <div class="category-group">
+        <h3 class="category-title">{{ category }}</h3>
+        <div class="attendance-list">
+            {% for p in participants %}
+            {% set att = attendance_map.get(p.id) %}
+            <label class="attendance-item {% if att and att.present %}checked{% endif %}" data-participant-id="{{ p.id }}">
+                <input type="checkbox"
+                       class="attendance-checkbox"
+                       data-protocol-id="{{ protocol.id }}"
+                       data-participant-id="{{ p.id }}"
+                       {% if att and att.present %}checked{% endif %}
+                       {% if not protocol.is_editable %}disabled{% endif %}>
+                <span class="attendance-name">{{ p.name }}</span>
+                <span class="attendance-time">
+                    {% if att and att.checked_at %}{{ att.checked_at.strftime('%H:%M') }}{% endif %}
+                </span>
+            </label>
+            {% endfor %}
+        </div>
+    </div>
+    {% endfor %}
+</section>
+
+<!-- Berichte / Einträge -->
+<section class="card">
+    <h2>Berichte</h2>
+    {% for category, participants in participants_by_cat.items() %}
+    <div class="category-group">
+        <h3 class="category-title">{{ category }}</h3>
+        {% for p in participants %}
+        {% set entry = entries_map.get(p.id) %}
+        <div class="entry-block" data-participant-id="{{ p.id }}">
+            <div class="entry-header" onclick="toggleEntry(this)">
+                <span class="entry-toggle">&#9654;</span>
+                <span class="entry-name">{{ p.name }}</span>
+                {% if entry and entry.content.strip() %}
+                <span class="entry-indicator has-content">Eintrag vorhanden</span>
+                {% else %}
+                <span class="entry-indicator">Kein Eintrag</span>
+                {% endif %}
+                {% if entry and entry.updated_at %}
+                <span class="entry-time">{{ entry.updated_at.strftime('%d.%m. %H:%M') }}</span>
+                {% endif %}
+            </div>
+            <div class="entry-body" style="display:none;">
+                <textarea class="entry-textarea"
+                          data-protocol-id="{{ protocol.id }}"
+                          data-participant-id="{{ p.id }}"
+                          placeholder="Bericht hier eintragen..."
+                          {% if not protocol.is_editable %}disabled{% endif %}
+                >{{ entry.content if entry else '' }}</textarea>
+
+                {% if protocol.is_editable %}
+                <div class="entry-actions">
+                    <button class="btn btn-small btn-primary save-entry-btn"
+                            data-protocol-id="{{ protocol.id }}"
+                            data-participant-id="{{ p.id }}">
+                        Speichern
+                    </button>
+                    <div class="file-upload-area">
+                        <label class="btn btn-small btn-outline upload-btn">
+                            Datei anhängen
+                            <input type="file" class="file-input" hidden
+                                   data-protocol-id="{{ protocol.id }}"
+                                   data-participant-id="{{ p.id }}"
+                                   accept=".png,.jpg,.jpeg,.gif,.pdf,.xlsx,.docx,.pptx">
+                        </label>
+                    </div>
+                    <span class="save-status"></span>
+                </div>
+                {% endif %}
+
+                <div class="attachments-list">
+                    {% if entry and entry.attachments %}
+                    {% for att in entry.attachments %}
+                    <div class="attachment-item" data-id="{{ att.id }}">
+                        <a href="{{ url_for('get_upload', protocol_id=protocol.id, filename=att.filename) }}"
+                           target="_blank">{{ att.original_name }}</a>
+                        {% if protocol.is_editable %}
+                        <button class="btn-icon delete-attachment" data-id="{{ att.id }}" title="Löschen">&times;</button>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% endfor %}
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/app.js') }}"></script>
+{% endblock %}
