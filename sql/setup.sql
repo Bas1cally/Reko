@@ -4,30 +4,7 @@
 -- Dieses Script im Supabase SQL Editor ausfuehren
 -- Kann mehrfach ausgefuehrt werden (loescht alte Tabellen)
 
--- Alte Storage-Objekte und Bucket loeschen
-DELETE FROM storage.objects WHERE bucket_id = 'attachments';
-DELETE FROM storage.buckets WHERE id = 'attachments';
-
--- Alte Policies loeschen (ignoriert Fehler wenn nicht vorhanden)
-DROP POLICY IF EXISTS "anon read participants" ON participants;
-DROP POLICY IF EXISTS "anon insert participants" ON participants;
-DROP POLICY IF EXISTS "anon update participants" ON participants;
-DROP POLICY IF EXISTS "anon delete participants" ON participants;
-DROP POLICY IF EXISTS "anon read protocols" ON protocols;
-DROP POLICY IF EXISTS "anon insert protocols" ON protocols;
-DROP POLICY IF EXISTS "anon update protocols" ON protocols;
-DROP POLICY IF EXISTS "anon read attendance" ON attendance;
-DROP POLICY IF EXISTS "anon insert attendance" ON attendance;
-DROP POLICY IF EXISTS "anon update attendance" ON attendance;
-DROP POLICY IF EXISTS "anon read entries" ON entries;
-DROP POLICY IF EXISTS "anon insert entries" ON entries;
-DROP POLICY IF EXISTS "anon update entries" ON entries;
-DROP POLICY IF EXISTS "anon delete entries" ON entries;
-DROP POLICY IF EXISTS "anon read attachments" ON attachments;
-DROP POLICY IF EXISTS "anon insert attachments" ON attachments;
-DROP POLICY IF EXISTS "anon delete attachments" ON attachments;
-
--- Alte Tabellen entfernen
+-- Alte Tabellen entfernen (CASCADE loescht auch Policies automatisch)
 DROP TABLE IF EXISTS attachments CASCADE;
 DROP TABLE IF EXISTS entries CASCADE;
 DROP TABLE IF EXISTS attendance CASCADE;
@@ -123,14 +100,26 @@ CREATE POLICY "anon delete attachments" ON attachments FOR DELETE TO anon USING 
 -- ===========================================
 -- Storage Bucket fuer Anhaenge (public bucket, einfacher Zugriff)
 -- ===========================================
-INSERT INTO storage.buckets (id, name, public) VALUES ('attachments', 'attachments', true);
+INSERT INTO storage.buckets (id, name, public)
+  VALUES ('attachments', 'attachments', true)
+  ON CONFLICT (id) DO NOTHING;
 
-CREATE POLICY "anon upload attachments" ON storage.objects
-  FOR INSERT TO anon WITH CHECK (bucket_id = 'attachments');
-CREATE POLICY "anon read attachments" ON storage.objects
-  FOR SELECT TO anon USING (bucket_id = 'attachments');
-CREATE POLICY "anon delete attachments" ON storage.objects
-  FOR DELETE TO anon USING (bucket_id = 'attachments');
+-- Storage Policies (nur anlegen wenn nicht vorhanden)
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'anon upload attachments' AND tablename = 'objects') THEN
+    CREATE POLICY "anon upload attachments" ON storage.objects
+      FOR INSERT TO anon WITH CHECK (bucket_id = 'attachments');
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'anon read attachments' AND tablename = 'objects') THEN
+    CREATE POLICY "anon read attachments" ON storage.objects
+      FOR SELECT TO anon USING (bucket_id = 'attachments');
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'anon delete attachments' AND tablename = 'objects') THEN
+    CREATE POLICY "anon delete attachments" ON storage.objects
+      FOR DELETE TO anon USING (bucket_id = 'attachments');
+  END IF;
+END $$;
 
 -- ===========================================
 -- Seed: Teilnehmer
