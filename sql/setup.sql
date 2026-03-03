@@ -98,28 +98,10 @@ CREATE POLICY "anon insert attachments" ON attachments FOR INSERT TO anon WITH C
 CREATE POLICY "anon delete attachments" ON attachments FOR DELETE TO anon USING (true);
 
 -- ===========================================
--- Storage Bucket fuer Anhaenge (public bucket, einfacher Zugriff)
+-- HINWEIS: Storage Bucket manuell im Dashboard erstellen!
+-- Dashboard -> Storage -> New Bucket -> Name: "attachments" -> Public: AN
+-- Dann unter Policies: allow anon for SELECT, INSERT, DELETE
 -- ===========================================
-INSERT INTO storage.buckets (id, name, public)
-  VALUES ('attachments', 'attachments', true)
-  ON CONFLICT (id) DO NOTHING;
-
--- Storage Policies (nur anlegen wenn nicht vorhanden)
-DO $$
-BEGIN
-  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'anon upload attachments' AND tablename = 'objects') THEN
-    CREATE POLICY "anon upload attachments" ON storage.objects
-      FOR INSERT TO anon WITH CHECK (bucket_id = 'attachments');
-  END IF;
-  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'anon read attachments' AND tablename = 'objects') THEN
-    CREATE POLICY "anon read attachments" ON storage.objects
-      FOR SELECT TO anon USING (bucket_id = 'attachments');
-  END IF;
-  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'anon delete attachments' AND tablename = 'objects') THEN
-    CREATE POLICY "anon delete attachments" ON storage.objects
-      FOR DELETE TO anon USING (bucket_id = 'attachments');
-  END IF;
-END $$;
 
 -- ===========================================
 -- Seed: Teilnehmer
