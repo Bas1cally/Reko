@@ -55,7 +55,7 @@ CREATE TABLE attachments (
 );
 
 -- ===========================================
--- Row Level Security (RLS)
+-- Row Level Security (RLS) - offen fuer anon (kein Login noetig)
 -- ===========================================
 ALTER TABLE participants ENABLE ROW LEVEL SECURITY;
 ALTER TABLE protocols ENABLE ROW LEVEL SECURITY;
@@ -63,40 +63,39 @@ ALTER TABLE attendance ENABLE ROW LEVEL SECURITY;
 ALTER TABLE entries ENABLE ROW LEVEL SECURITY;
 ALTER TABLE attachments ENABLE ROW LEVEL SECURITY;
 
--- Policies: Authentifizierte User duerfen alles
-CREATE POLICY "Authenticated read participants" ON participants FOR SELECT TO authenticated USING (true);
-CREATE POLICY "Authenticated insert participants" ON participants FOR INSERT TO authenticated WITH CHECK (true);
-CREATE POLICY "Authenticated update participants" ON participants FOR UPDATE TO authenticated USING (true);
-CREATE POLICY "Authenticated delete participants" ON participants FOR DELETE TO authenticated USING (true);
+CREATE POLICY "anon read participants" ON participants FOR SELECT TO anon USING (true);
+CREATE POLICY "anon insert participants" ON participants FOR INSERT TO anon WITH CHECK (true);
+CREATE POLICY "anon update participants" ON participants FOR UPDATE TO anon USING (true);
+CREATE POLICY "anon delete participants" ON participants FOR DELETE TO anon USING (true);
 
-CREATE POLICY "Authenticated read protocols" ON protocols FOR SELECT TO authenticated USING (true);
-CREATE POLICY "Authenticated insert protocols" ON protocols FOR INSERT TO authenticated WITH CHECK (true);
-CREATE POLICY "Authenticated update protocols" ON protocols FOR UPDATE TO authenticated USING (true);
+CREATE POLICY "anon read protocols" ON protocols FOR SELECT TO anon USING (true);
+CREATE POLICY "anon insert protocols" ON protocols FOR INSERT TO anon WITH CHECK (true);
+CREATE POLICY "anon update protocols" ON protocols FOR UPDATE TO anon USING (true);
 
-CREATE POLICY "Authenticated read attendance" ON attendance FOR SELECT TO authenticated USING (true);
-CREATE POLICY "Authenticated insert attendance" ON attendance FOR INSERT TO authenticated WITH CHECK (true);
-CREATE POLICY "Authenticated update attendance" ON attendance FOR UPDATE TO authenticated USING (true);
+CREATE POLICY "anon read attendance" ON attendance FOR SELECT TO anon USING (true);
+CREATE POLICY "anon insert attendance" ON attendance FOR INSERT TO anon WITH CHECK (true);
+CREATE POLICY "anon update attendance" ON attendance FOR UPDATE TO anon USING (true);
 
-CREATE POLICY "Authenticated read entries" ON entries FOR SELECT TO authenticated USING (true);
-CREATE POLICY "Authenticated insert entries" ON entries FOR INSERT TO authenticated WITH CHECK (true);
-CREATE POLICY "Authenticated update entries" ON entries FOR UPDATE TO authenticated USING (true);
-CREATE POLICY "Authenticated delete entries" ON entries FOR DELETE TO authenticated USING (true);
+CREATE POLICY "anon read entries" ON entries FOR SELECT TO anon USING (true);
+CREATE POLICY "anon insert entries" ON entries FOR INSERT TO anon WITH CHECK (true);
+CREATE POLICY "anon update entries" ON entries FOR UPDATE TO anon USING (true);
+CREATE POLICY "anon delete entries" ON entries FOR DELETE TO anon USING (true);
 
-CREATE POLICY "Authenticated read attachments" ON attachments FOR SELECT TO authenticated USING (true);
-CREATE POLICY "Authenticated insert attachments" ON attachments FOR INSERT TO authenticated WITH CHECK (true);
-CREATE POLICY "Authenticated delete attachments" ON attachments FOR DELETE TO authenticated USING (true);
+CREATE POLICY "anon read attachments" ON attachments FOR SELECT TO anon USING (true);
+CREATE POLICY "anon insert attachments" ON attachments FOR INSERT TO anon WITH CHECK (true);
+CREATE POLICY "anon delete attachments" ON attachments FOR DELETE TO anon USING (true);
 
 -- ===========================================
--- Storage Bucket fuer Anhaenge
+-- Storage Bucket fuer Anhaenge (public bucket, einfacher Zugriff)
 -- ===========================================
-INSERT INTO storage.buckets (id, name, public) VALUES ('attachments', 'attachments', false);
+INSERT INTO storage.buckets (id, name, public) VALUES ('attachments', 'attachments', true);
 
-CREATE POLICY "Authenticated upload attachments" ON storage.objects
-  FOR INSERT TO authenticated WITH CHECK (bucket_id = 'attachments');
-CREATE POLICY "Authenticated read attachments" ON storage.objects
-  FOR SELECT TO authenticated USING (bucket_id = 'attachments');
-CREATE POLICY "Authenticated delete attachments" ON storage.objects
-  FOR DELETE TO authenticated USING (bucket_id = 'attachments');
+CREATE POLICY "anon upload attachments" ON storage.objects
+  FOR INSERT TO anon WITH CHECK (bucket_id = 'attachments');
+CREATE POLICY "anon read attachments" ON storage.objects
+  FOR SELECT TO anon USING (bucket_id = 'attachments');
+CREATE POLICY "anon delete attachments" ON storage.objects
+  FOR DELETE TO anon USING (bucket_id = 'attachments');
 
 -- ===========================================
 -- Seed: Teilnehmer

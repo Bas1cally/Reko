@@ -11,10 +11,13 @@ const App = {
 
   async init() {
     this.supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-    Auth.init(this.supabase);
 
-    const session = await Auth.requireAuth();
-    if (!session) return;
+    const user = Auth.requireAuth();
+    if (!user) return;
+
+    // Aktuellen User im Header anzeigen
+    const userEl = document.getElementById('current-user');
+    if (userEl) userEl.textContent = user.name;
 
     document.getElementById('loading').style.display = 'block';
     document.getElementById('app-content').style.display = 'none';

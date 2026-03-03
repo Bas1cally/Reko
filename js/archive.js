@@ -7,10 +7,9 @@ const Archive = {
 
   async init() {
     this.supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-    Auth.init(this.supabase);
 
-    const session = await Auth.requireAuth();
-    if (!session) return;
+    const user = Auth.requireAuth();
+    if (!user) return;
 
     await this.loadArchive();
   },
