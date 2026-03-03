@@ -89,10 +89,33 @@ const App = {
     return data || [];
   },
 
+  // --- Fehlende Sektionen anlegen falls noetig ---
+  async ensureSections(entries) {
+    let brEntry = entries.find(e => e.section === 'betriebsrat');
+    let sonstigesEntry = entries.find(e => e.section === 'sonstiges');
+
+    if (!brEntry) {
+      const { data } = await this.supabase
+        .from('entries')
+        .insert({ protocol_id: this.protocol.id, section: 'betriebsrat', content: '', sort_order: 1 })
+        .select().single();
+      if (data) entries.push(data);
+    }
+    if (!sonstigesEntry) {
+      const { data } = await this.supabase
+        .from('entries')
+        .insert({ protocol_id: this.protocol.id, section: 'sonstiges', content: '', sort_order: 99 })
+        .select().single();
+      if (data) entries.push(data);
+    }
+    return entries;
+  },
+
   // --- Hauptrendering ---
   async render() {
     const attendance = await this.loadAttendance();
-    const entries = await this.loadEntries();
+    let entries = await this.loadEntries();
+    entries = await this.ensureSections(entries);
 
     // Header
     document.getElementById('kw-badge').textContent = `KW ${this.protocol.calendar_week}`;
