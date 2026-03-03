@@ -1,6 +1,3 @@
-__pycache__/
-*.pyc
-*.db
-uploads/
-archiv/
 .env
+.DS_Store
+node_modules/
