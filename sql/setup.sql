@@ -2,6 +2,21 @@
 -- ReKo Protokoll - Supabase Setup
 -- ===========================================
 -- Dieses Script im Supabase SQL Editor ausfuehren
+-- Kann mehrfach ausgefuehrt werden (loescht alte Tabellen)
+
+-- Alte Tabellen entfernen (in richtiger Reihenfolge wegen Foreign Keys)
+DROP TABLE IF EXISTS attachments CASCADE;
+DROP TABLE IF EXISTS entries CASCADE;
+DROP TABLE IF EXISTS attendance CASCADE;
+DROP TABLE IF EXISTS protocols CASCADE;
+DROP TABLE IF EXISTS participants CASCADE;
+
+-- Storage Bucket loeschen falls vorhanden
+DELETE FROM storage.buckets WHERE id = 'attachments';
+
+-- Alte Funktionen loeschen
+DROP FUNCTION IF EXISTS create_weekly_protocol();
+DROP FUNCTION IF EXISTS archive_protocol(UUID);
 
 -- 1. Teilnehmer-Tabelle
 CREATE TABLE participants (
