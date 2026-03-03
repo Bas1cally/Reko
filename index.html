@@ -5,44 +5,19 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>ReKo Protokoll</title>
   <link rel="stylesheet" href="css/style.css">
-  <style>
-    .name-grid {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 12px;
-      justify-content: center;
-      margin-top: 8px;
-    }
-    .name-btn {
-      padding: 14px 28px;
-      background: var(--mb-black);
-      color: var(--mb-white);
-      border: none;
-      border-radius: var(--radius);
-      font-size: 16px;
-      font-weight: 600;
-      cursor: pointer;
-      transition: background 0.2s;
-      min-width: 140px;
-    }
-    .name-btn:hover {
-      background: var(--mb-gray-700);
-    }
-  </style>
 </head>
 <body>
   <div class="login-container">
-    <div class="login-box" style="max-width:500px">
+    <div class="login-box">
       <h1>ReKo Protokoll</h1>
-      <p>Wer bist du?</p>
-      <div id="name-grid" class="name-grid">
-        <div class="spinner"></div>
-      </div>
+      <p>Name eingeben und loslegen</p>
+      <form id="login-form">
+        <input type="text" id="username" placeholder="Vor- und Nachname" autocomplete="name" required>
+        <button type="submit" class="btn-login">Einschalten</button>
+      </form>
     </div>
   </div>
 
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="js/config.js"></script>
   <script src="js/auth.js"></script>
   <script>
     // Wenn schon eingeloggt, direkt weiter
@@ -50,34 +25,13 @@
       window.location.href = 'protocol.html';
     }
 
-    // Teilnehmer laden und als Buttons anzeigen
-    (async function() {
-      const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-      const { data: participants } = await sb
-        .from('participants')
-        .select('*')
-        .eq('active', true)
-        .order('sort_order');
-
-      const grid = document.getElementById('name-grid');
-      grid.innerHTML = '';
-
-      if (!participants || participants.length === 0) {
-        grid.innerHTML = '<p style="color:var(--mb-gray-500)">Keine Teilnehmer gefunden. Bitte SQL-Setup pruefen.</p>';
-        return;
-      }
-
-      for (const p of participants) {
-        const btn = document.createElement('button');
-        btn.className = 'name-btn';
-        btn.textContent = p.name;
-        btn.addEventListener('click', () => {
-          Auth.setUser(p);
-          window.location.href = 'protocol.html';
-        });
-        grid.appendChild(btn);
-      }
-    })();
+    document.getElementById('login-form').addEventListener('submit', (e) => {
+      e.preventDefault();
+      const name = document.getElementById('username').value.trim();
+      if (!name) return;
+      Auth.setUser({ id: null, name: name });
+      window.location.href = 'protocol.html';
+    });
   </script>
 </body>
 </html>
