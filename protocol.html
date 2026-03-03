@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ReKo Protokoll</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <!-- Header -->
+  <div class="header">
+    <h1>ReKo Protokoll</h1>
+    <span id="kw-badge" class="kw-badge">KW --</span>
+    <div class="header-actions">
+      <button onclick="window.location.href='archive.html'">Archiv</button>
+      <button id="btn-archive-protocol" onclick="confirmArchive()">Woche abschliessen</button>
+      <button onclick="Auth.logout()">Abmelden</button>
+    </div>
+  </div>
+
+  <!-- Loading -->
+  <div id="loading" class="loading" style="display:none">
+    <div class="spinner"></div>
+    <p>Protokoll wird geladen...</p>
+  </div>
+
+  <!-- Main Content -->
+  <div id="app-content" class="main" style="display:none">
+    <!-- Wocheninfo -->
+    <div class="week-info">
+      <span id="week-dates"></span>
+    </div>
+
+    <!-- Anwesenheit -->
+    <div class="attendance-section">
+      <h2>Anwesenheit</h2>
+      <div id="attendance-grid" class="attendance-grid"></div>
+    </div>
+
+    <!-- Eintraege -->
+    <div id="entries-container"></div>
+  </div>
+
+  <!-- Save Indicator -->
+  <div id="save-indicator" class="save-indicator"></div>
+
+  <!-- Archive Confirmation Modal -->
+  <div id="archive-modal" class="modal-overlay">
+    <div class="modal">
+      <h2>Woche abschliessen?</h2>
+      <p>Das aktuelle Protokoll wird archiviert und eine neue Woche gestartet. Dieser Vorgang kann nicht rueckgaengig gemacht werden.</p>
+      <div class="modal-actions">
+        <button class="btn btn-secondary" onclick="closeArchiveModal()">Abbrechen</button>
+        <button class="btn btn-primary" onclick="doArchive()">Abschliessen</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="js/config.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/app.js"></script>
+  <script>
+    App.init();
+
+    function confirmArchive() {
+      document.getElementById('archive-modal').classList.add('open');
+    }
+    function closeArchiveModal() {
+      document.getElementById('archive-modal').classList.remove('open');
+    }
+    async function doArchive() {
+      closeArchiveModal();
+      await App.archiveProtocol();
+    }
+  </script>
+</body>
+</html>

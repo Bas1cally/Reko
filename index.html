@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ReKo Protokoll - Login</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div class="login-container">
+    <div class="login-box">
+      <h1>ReKo Protokoll</h1>
+      <p>Bitte Gruppenpasswort eingeben</p>
+      <form id="login-form">
+        <input type="password" id="password" placeholder="Passwort" autocomplete="current-password" required>
+        <button type="submit" class="btn-login">Anmelden</button>
+      </form>
+      <div id="login-error" class="login-error">Falsches Passwort.</div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="js/config.js"></script>
+  <script src="js/auth.js"></script>
+  <script>
+    const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    Auth.init(sb);
+
+    // Wenn schon eingeloggt, direkt weiter
+    Auth.getSession().then(session => {
+      if (session) window.location.href = 'protocol.html';
+    });
+
+    document.getElementById('login-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const pw = document.getElementById('password').value;
+      const errEl = document.getElementById('login-error');
+      errEl.style.display = 'none';
+
+      try {
+        await Auth.login(pw);
+        window.location.href = 'protocol.html';
+      } catch (err) {
+        errEl.style.display = 'block';
+        errEl.textContent = 'Falsches Passwort.';
+      }
+    });
+  </script>
+</body>
+</html>
