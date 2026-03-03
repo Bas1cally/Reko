@@ -3,35 +3,79 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ReKo Protokoll</title>
-  <link rel="stylesheet" href="css/style.css?v=2">
+  <title>ReKo Protokoll - Anmeldung</title>
+  <link rel="stylesheet" href="css/style.css?v=3">
 </head>
 <body>
   <div class="login-container">
     <div class="login-box">
       <h1>ReKo Protokoll</h1>
-      <p>Name eingeben und loslegen</p>
-      <form id="login-form">
-        <input type="text" id="username" placeholder="Vor- und Nachname" autocomplete="name" required>
-        <button type="submit" class="btn-login">Einschalten</button>
-      </form>
+      <p>Wer bist du?</p>
+      <div id="login-loading" class="loading" style="padding:20px">
+        <div class="spinner"></div>
+      </div>
+      <div id="participant-grid" class="participant-grid" style="display:none"></div>
     </div>
   </div>
 
-  <script src="js/auth.js?v=2"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="js/config.js?v=3"></script>
+  <script src="js/auth.js?v=3"></script>
   <script>
     // Wenn schon eingeloggt, direkt weiter
     if (Auth.getUser()) {
       window.location.href = 'protocol.html';
     }
 
-    document.getElementById('login-form').addEventListener('submit', (e) => {
-      e.preventDefault();
-      const name = document.getElementById('username').value.trim();
-      if (!name) return;
-      Auth.setUser({ id: null, name: name });
-      window.location.href = 'protocol.html';
-    });
+    const CATEGORY_LABELS = {
+      aerzte: 'Ärzte',
+      sozialberatung: 'Sozialberatung',
+      bgf: 'Betriebliche Gesundheitsförderung',
+      wd_orga: 'WD-Organisation',
+      sanitaeter: 'Notfall-/Rettungssanitäter',
+      betriebsrat: 'Betriebsratsmitglied',
+    };
+
+    (async () => {
+      const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+      const { data: participants } = await sb
+        .from('participants')
+        .select('*')
+        .eq('active', true)
+        .order('sort_order');
+
+      const grid = document.getElementById('participant-grid');
+      const categories = [...new Set(participants.map(p => p.category))];
+
+      for (const cat of categories) {
+        const catParts = participants.filter(p => p.category === cat);
+        const label = CATEGORY_LABELS[cat] || cat;
+
+        const group = document.createElement('div');
+        group.className = 'login-group';
+        group.innerHTML = `<div class="login-group-label">${label}</div>`;
+
+        const items = document.createElement('div');
+        items.className = 'login-group-items';
+
+        for (const p of catParts) {
+          const btn = document.createElement('button');
+          btn.className = 'login-participant-btn';
+          btn.textContent = p.name;
+          btn.addEventListener('click', () => {
+            Auth.setUser(p);
+            window.location.href = 'protocol.html';
+          });
+          items.appendChild(btn);
+        }
+
+        group.appendChild(items);
+        grid.appendChild(group);
+      }
+
+      document.getElementById('login-loading').style.display = 'none';
+      grid.style.display = 'flex';
+    })();
   </script>
 </body>
 </html>

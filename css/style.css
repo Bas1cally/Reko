@@ -80,7 +80,7 @@ body {
   padding: 48px 40px;
   border-radius: 8px;
   width: 100%;
-  max-width: 400px;
+  max-width: 640px;
   text-align: center;
 }
 .login-box h1 {
@@ -92,39 +92,38 @@ body {
   margin-bottom: 28px;
   font-size: 14px;
 }
-.login-box input {
-  width: 100%;
-  padding: 12px 16px;
+.participant-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  text-align: left;
+}
+.login-group-label {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--mb-gray-500);
+  margin-bottom: 8px;
+}
+.login-group-items {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.login-participant-btn {
+  padding: 10px 18px;
   border: 2px solid var(--mb-gray-200);
   border-radius: var(--radius);
-  font-size: 16px;
-  margin-bottom: 16px;
-  transition: border-color 0.2s;
-}
-.login-box input:focus {
-  outline: none;
-  border-color: var(--mb-black);
-}
-.login-box .btn-login {
-  width: 100%;
-  padding: 12px;
-  background: var(--mb-black);
-  color: var(--mb-white);
-  border: none;
-  border-radius: var(--radius);
-  font-size: 16px;
-  font-weight: 600;
+  background: var(--mb-white);
+  font-size: 14px;
+  font-weight: 500;
   cursor: pointer;
-  transition: background 0.2s;
+  transition: all 0.15s;
 }
-.login-box .btn-login:hover {
-  background: var(--mb-gray-700);
-}
-.login-error {
-  color: var(--mb-red);
-  font-size: 13px;
-  margin-top: 12px;
-  display: none;
+.login-participant-btn:hover {
+  border-color: var(--mb-black);
+  background: var(--mb-gray-100);
 }
 
 /* === MAIN CONTENT === */
