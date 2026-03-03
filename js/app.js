@@ -2,22 +2,31 @@
 // ReKo Protokoll - Hauptanwendung
 // ===========================================
 
+const CATEGORY_LABELS = {
+  aerzte: 'Ärzte',
+  sozialberatung: 'Sozialberatung',
+  bgf: 'Betriebliche Gesundheitsförderung',
+  wd_orga: 'WD-Organisation',
+  sanitaeter: 'Notfall-/Rettungssanitäter',
+  betriebsrat: 'Betriebsratsmitglied',
+};
+
 const App = {
   supabase: null,
   protocol: null,
   participants: [],
-  entries: {},
   saveTimers: {},
+  currentUser: null,
 
   async init() {
     this.supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-    const user = Auth.requireAuth();
-    if (!user) return;
+    this.currentUser = Auth.requireAuth();
+    if (!this.currentUser) return;
 
     // Aktuellen User im Header anzeigen
     const userEl = document.getElementById('current-user');
-    if (userEl) userEl.textContent = user.name;
+    if (userEl) userEl.textContent = this.currentUser.name;
 
     document.getElementById('loading').style.display = 'block';
     document.getElementById('app-content').style.display = 'none';
@@ -33,7 +42,6 @@ const App = {
     }
   },
 
-  // --- Protokoll laden oder erstellen ---
   async loadOrCreateProtocol() {
     const { data, error } = await this.supabase.rpc('create_weekly_protocol');
     if (error) throw error;
@@ -47,7 +55,6 @@ const App = {
     this.protocol = proto;
   },
 
-  // --- Teilnehmer laden ---
   async loadParticipants() {
     const { data } = await this.supabase
       .from('participants')
@@ -57,7 +64,6 @@ const App = {
     this.participants = data || [];
   },
 
-  // --- Anwesenheit laden ---
   async loadAttendance() {
     const { data } = await this.supabase
       .from('attendance')
@@ -66,18 +72,15 @@ const App = {
     return data || [];
   },
 
-  // --- Eintraege laden ---
   async loadEntries() {
     const { data } = await this.supabase
       .from('entries')
       .select('*')
-      .eq('protocol_id', this.protocol.id);
-    const map = {};
-    (data || []).forEach(e => { map[e.participant_id] = e; });
-    return map;
+      .eq('protocol_id', this.protocol.id)
+      .order('sort_order');
+    return data || [];
   },
 
-  // --- Anhaenge laden ---
   async loadAttachments(entryId) {
     const { data } = await this.supabase
       .from('attachments')
@@ -89,7 +92,7 @@ const App = {
   // --- Hauptrendering ---
   async render() {
     const attendance = await this.loadAttendance();
-    this.entries = await this.loadEntries();
+    const entries = await this.loadEntries();
 
     // Header
     document.getElementById('kw-badge').textContent = `KW ${this.protocol.calendar_week}`;
@@ -99,70 +102,152 @@ const App = {
     // Anwesenheit
     this.renderAttendance(attendance);
 
-    // Eintraege nach Kategorie
-    const categories = [
-      { key: 'meister', label: 'Meister' },
-      { key: 'pitstop', label: 'Pitstop / Instandhaltung' },
-      { key: 'logistik', label: 'Logistik' },
-    ];
+    // Ablauf rendern
+    const container = document.getElementById('entries-container');
+    container.innerHTML = '';
 
-    const entriesContainer = document.getElementById('entries-container');
-    entriesContainer.innerHTML = '';
+    // 1. Bericht Betriebsrat
+    const brEntry = entries.find(e => e.section === 'betriebsrat');
+    if (brEntry) {
+      container.appendChild(this.createSection('Bericht des Bereichsbetriebsrates', [brEntry]));
+    }
 
-    for (const cat of categories) {
-      const catParticipants = this.participants.filter(p => p.category === cat.key);
-      if (catParticipants.length === 0) continue;
+    // 2. Blitzlicht - Berichte aller Anwesenden
+    const blitzEntries = entries.filter(e => e.section === 'blitzlicht');
+    container.appendChild(await this.createBlitzlichtSection(blitzEntries));
 
-      const section = document.createElement('div');
-      section.className = 'category-section';
-      section.innerHTML = `<div class="category-header">${cat.label}</div>`;
-
-      for (const p of catParticipants) {
-        const entry = this.entries[p.id] || { id: null, content: '' };
-        section.appendChild(await this.createEntryCard(p, entry));
-      }
-      entriesContainer.appendChild(section);
+    // 3. Sonstiges
+    const sonstigesEntry = entries.find(e => e.section === 'sonstiges');
+    if (sonstigesEntry) {
+      container.appendChild(this.createSection('Sonstiges', [sonstigesEntry]));
     }
 
     document.getElementById('loading').style.display = 'none';
     document.getElementById('app-content').style.display = 'block';
   },
 
-  // --- Anwesenheit rendern ---
+  // --- Anwesenheit ---
   renderAttendance(attendanceList) {
     const grid = document.getElementById('attendance-grid');
     grid.innerHTML = '';
 
-    for (const p of this.participants) {
-      const att = attendanceList.find(a => a.participant_id === p.id);
-      const item = document.createElement('div');
-      item.className = 'attendance-item' + (att && att.present ? ' present' : '');
-      item.innerHTML = `<span class="check">&#10003;</span><span>${p.name}</span>`;
-      item.addEventListener('click', () => this.toggleAttendance(p.id, item, att));
-      grid.appendChild(item);
+    // Nach Kategorie gruppieren
+    const categories = [...new Set(this.participants.map(p => p.category))];
+
+    for (const cat of categories) {
+      const catParticipants = this.participants.filter(p => p.category === cat);
+      const label = CATEGORY_LABELS[cat] || cat;
+
+      const group = document.createElement('div');
+      group.className = 'attendance-group';
+      group.innerHTML = `<div class="attendance-group-label">${label}</div>`;
+
+      const items = document.createElement('div');
+      items.className = 'attendance-items';
+
+      for (const p of catParticipants) {
+        const att = attendanceList.find(a => a.participant_id === p.id);
+        const item = document.createElement('div');
+        item.className = 'attendance-item' + (att && att.present ? ' present' : '');
+        item.innerHTML = `<span class="check">&#10003;</span><span>${p.name}</span>`;
+        item.addEventListener('click', () => this.toggleAttendance(p.id, item));
+        items.appendChild(item);
+      }
+
+      group.appendChild(items);
+      grid.appendChild(group);
     }
   },
 
-  // --- Anwesenheit toggle ---
-  async toggleAttendance(participantId, element, att) {
+  async toggleAttendance(participantId, element) {
     const isPresent = element.classList.toggle('present');
     await this.supabase
       .from('attendance')
       .update({ present: isPresent })
       .eq('protocol_id', this.protocol.id)
       .eq('participant_id', participantId);
-    this.showSave();
+    this.showSave('saved');
   },
 
-  // --- Entry Card erstellen ---
-  async createEntryCard(participant, entry) {
+  // --- Sektionen (Betriebsrat, Sonstiges) ---
+  createSection(title, entries) {
+    const section = document.createElement('div');
+    section.className = 'category-section';
+    section.innerHTML = `<div class="category-header">${title}</div>`;
+
+    for (const entry of entries) {
+      const card = document.createElement('div');
+      card.className = 'entry-card' + (entry.content ? ' has-content open' : ' open');
+
+      const body = document.createElement('div');
+      body.className = 'entry-card-body';
+      body.style.display = 'block';
+
+      const textarea = document.createElement('textarea');
+      textarea.value = entry.content || '';
+      textarea.placeholder = `${title} ...`;
+      textarea.addEventListener('input', () => {
+        this.debounceSaveEntry(entry.id, textarea.value, card);
+      });
+
+      body.appendChild(textarea);
+      card.appendChild(body);
+      section.appendChild(card);
+    }
+
+    return section;
+  },
+
+  // --- Blitzlicht (Berichte aller) ---
+  async createBlitzlichtSection(existingEntries) {
+    const section = document.createElement('div');
+    section.className = 'category-section';
+    section.innerHTML = `<div class="category-header">Berichte / Blitzlicht</div>`;
+
+    // Bestehende Berichte anzeigen
+    for (const entry of existingEntries) {
+      section.appendChild(await this.createEntryCard(entry));
+    }
+
+    // Button: Neuen Bericht hinzufuegen
+    const addBtn = document.createElement('button');
+    addBtn.className = 'btn btn-primary';
+    addBtn.style.marginTop = '12px';
+    addBtn.textContent = '+ Eigenen Bericht hinzufügen';
+    addBtn.addEventListener('click', async () => {
+      const { data: newEntry, error } = await this.supabase
+        .from('entries')
+        .insert({
+          protocol_id: this.protocol.id,
+          author_name: this.currentUser.name,
+          section: 'blitzlicht',
+          content: '',
+          sort_order: 10 + existingEntries.length,
+        })
+        .select()
+        .single();
+
+      if (!error && newEntry) {
+        const card = await this.createEntryCard(newEntry);
+        card.classList.add('open');
+        section.insertBefore(card, addBtn);
+        card.querySelector('textarea').focus();
+      }
+    });
+    section.appendChild(addBtn);
+
+    return section;
+  },
+
+  // --- Entry Card ---
+  async createEntryCard(entry) {
     const card = document.createElement('div');
     card.className = 'entry-card' + (entry.content ? ' has-content' : '');
 
     const header = document.createElement('div');
     header.className = 'entry-card-header';
     header.innerHTML = `
-      <span class="name">${participant.name}</span>
+      <span class="name">Bericht von ${entry.author_name || 'Unbekannt'}</span>
       <span class="status">${entry.content ? 'Eingetragen' : 'Offen'}</span>
     `;
     header.addEventListener('click', () => card.classList.toggle('open'));
@@ -172,9 +257,9 @@ const App = {
 
     const textarea = document.createElement('textarea');
     textarea.value = entry.content || '';
-    textarea.placeholder = `Themen fuer ${participant.name} ...`;
+    textarea.placeholder = `Bericht von ${entry.author_name || ''} ...`;
     textarea.addEventListener('input', () => {
-      this.debounceSave(participant.id, entry.id, textarea.value, card, header);
+      this.debounceSaveEntry(entry.id, textarea.value, card, header);
     });
 
     body.appendChild(textarea);
@@ -185,16 +270,15 @@ const App = {
 
     const fileList = document.createElement('div');
     fileList.className = 'file-list';
-    fileList.id = `files-${participant.id}`;
 
     const uploadBtn = document.createElement('label');
     uploadBtn.className = 'file-upload-btn';
-    uploadBtn.innerHTML = '+ Datei anhaengen';
+    uploadBtn.innerHTML = '+ Datei anhängen';
     const fileInput = document.createElement('input');
     fileInput.type = 'file';
     fileInput.style.display = 'none';
     fileInput.addEventListener('change', (e) => {
-      if (e.target.files[0] && entry.id) {
+      if (e.target.files[0]) {
         this.uploadFile(entry.id, e.target.files[0], fileList);
       }
     });
@@ -208,20 +292,18 @@ const App = {
     card.appendChild(body);
 
     // Vorhandene Anhaenge laden
-    if (entry.id) {
-      const attachments = await this.loadAttachments(entry.id);
-      for (const att of attachments) {
-        this.addFileItem(fileList, att);
-      }
+    const attachments = await this.loadAttachments(entry.id);
+    for (const att of attachments) {
+      this.addFileItem(fileList, att);
     }
 
     return card;
   },
 
   // --- Debounced Save ---
-  debounceSave(participantId, entryId, content, card, header) {
-    clearTimeout(this.saveTimers[participantId]);
-    this.saveTimers[participantId] = setTimeout(async () => {
+  debounceSaveEntry(entryId, content, card, header) {
+    clearTimeout(this.saveTimers[entryId]);
+    this.saveTimers[entryId] = setTimeout(async () => {
       this.showSave('saving');
       const { error } = await this.supabase
         .from('entries')
@@ -231,7 +313,9 @@ const App = {
       if (!error) {
         this.showSave('saved');
         card.classList.toggle('has-content', content.trim().length > 0);
-        header.querySelector('.status').textContent = content.trim() ? 'Eingetragen' : 'Offen';
+        if (header) {
+          header.querySelector('.status').textContent = content.trim() ? 'Eingetragen' : 'Offen';
+        }
       }
     }, 600);
   },
@@ -270,7 +354,6 @@ const App = {
     }
   },
 
-  // --- Datei-Item anzeigen ---
   addFileItem(container, attachment) {
     const item = document.createElement('div');
     item.className = 'file-item';
@@ -283,7 +366,6 @@ const App = {
     container.appendChild(item);
   },
 
-  // --- Datei herunterladen ---
   async downloadFile(storagePath, originalName) {
     const { data } = await this.supabase.storage
       .from('attachments')
@@ -298,7 +380,6 @@ const App = {
     }
   },
 
-  // --- Datei entfernen ---
   async removeFile(attachmentId, storagePath, btn) {
     await this.supabase.storage.from('attachments').remove([storagePath]);
     await this.supabase.from('attachments').delete().eq('id', attachmentId);
@@ -306,13 +387,11 @@ const App = {
     this.showSave('saved');
   },
 
-  // --- Protokoll archivieren ---
   async archiveProtocol() {
     await this.supabase.rpc('archive_protocol', { p_protocol_id: this.protocol.id });
     window.location.reload();
   },
 
-  // --- Speicher-Indikator ---
   showSave(state) {
     const el = document.getElementById('save-indicator');
     el.className = 'save-indicator';
@@ -326,7 +405,6 @@ const App = {
     }
   },
 
-  // --- Datum formatieren ---
   formatDate(dateStr) {
     const d = new Date(dateStr);
     return d.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' });

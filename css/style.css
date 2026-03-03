@@ -165,8 +165,21 @@ body {
 }
 .attendance-grid {
   display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.attendance-group-label {
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--mb-gray-500);
+  margin-bottom: 6px;
+}
+.attendance-items {
+  display: flex;
   flex-wrap: wrap;
-  gap: 10px;
+  gap: 8px;
 }
 .attendance-item {
   display: flex;

@@ -19,7 +19,7 @@ DROP FUNCTION IF EXISTS archive_protocol(UUID);
 CREATE TABLE participants (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   name TEXT NOT NULL,
-  category TEXT NOT NULL CHECK (category IN ('meister', 'pitstop', 'logistik')),
+  category TEXT NOT NULL,
   sort_order INT NOT NULL DEFAULT 0,
   active BOOLEAN NOT NULL DEFAULT true,
   created_at TIMESTAMPTZ DEFAULT now()
@@ -46,12 +46,15 @@ CREATE TABLE attendance (
   UNIQUE(protocol_id, participant_id)
 );
 
--- 4. Eintraege
+-- 4. Eintraege (Berichte)
 CREATE TABLE entries (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   protocol_id UUID NOT NULL REFERENCES protocols(id) ON DELETE CASCADE,
-  participant_id UUID NOT NULL REFERENCES participants(id),
+  participant_id UUID REFERENCES participants(id),
+  author_name TEXT,
+  section TEXT NOT NULL DEFAULT 'blitzlicht',
   content TEXT NOT NULL DEFAULT '',
+  sort_order INT NOT NULL DEFAULT 0,
   created_at TIMESTAMPTZ DEFAULT now(),
   updated_at TIMESTAMPTZ DEFAULT now()
 );
@@ -104,15 +107,36 @@ CREATE POLICY "anon delete attachments" ON attachments FOR DELETE TO anon USING 
 -- ===========================================
 
 -- ===========================================
--- Seed: Teilnehmer
+-- Seed: Teilnehmer (aus Original-Dokument)
 -- ===========================================
 INSERT INTO participants (name, category, sort_order) VALUES
-  ('Achim',    'meister',  1),
-  ('Juergen',  'meister',  2),
-  ('Jan',      'meister',  3),
-  ('Dominik',  'meister',  4),
-  ('Instandhaltung', 'pitstop', 5),
-  ('Logistik', 'logistik', 6);
+  -- Aerzte
+  ('Dr. Frei, Markus',      'aerzte', 1),
+  ('Dr. Schmidt, Sabine',   'aerzte', 2),
+  ('Dr. Vitez, Lilla',      'aerzte', 3),
+  -- Sozialberatung
+  ('Walther, Katja',        'sozialberatung', 10),
+  ('Voelkering, Katharina', 'sozialberatung', 11),
+  ('Guersel, Helin',        'sozialberatung', 12),
+  -- Betriebliche Gesundheitsfoerderung (BGF)
+  ('Zieger-Buchta, Katrin', 'bgf', 20),
+  ('Mueller-Horn, Susanne', 'bgf', 21),
+  ('Krempl, Lara',          'bgf', 22),
+  -- WD-Organisation
+  ('Schmidt, Emily-Kim',    'wd_orga', 30),
+  ('Radimersky, Larissa',   'wd_orga', 31),
+  -- Notfall-/Rettungssanitaeter
+  ('Putschler, Walter',     'sanitaeter', 40),
+  ('Krempl, Elke',          'sanitaeter', 41),
+  ('Breig, Bernd',          'sanitaeter', 42),
+  ('Kunz, Lia',             'sanitaeter', 43),
+  ('Zeller, Tobias',        'sanitaeter', 44),
+  ('Jochim, Benjamin',      'sanitaeter', 45),
+  ('Siebert, Emanuel',      'sanitaeter', 46),
+  ('Wunsch, Fabian',        'sanitaeter', 47),
+  ('Goepfrich, Markus',     'sanitaeter', 48),
+  -- Betriebsrat
+  ('Betriebsratsmitglied',  'betriebsrat', 50);
 
 -- ===========================================
 -- Funktion: Neues Protokoll fuer aktuelle KW
@@ -145,14 +169,17 @@ BEGIN
     VALUES (v_cw, v_year, v_week_start, v_week_end)
     RETURNING id INTO v_protocol_id;
 
-  -- Anwesenheit + leere Eintraege fuer alle aktiven Teilnehmer
+  -- Anwesenheit fuer alle aktiven Teilnehmer
   FOR v_participant IN SELECT id FROM participants WHERE active = true
   LOOP
     INSERT INTO attendance (protocol_id, participant_id, present)
       VALUES (v_protocol_id, v_participant.id, false);
-    INSERT INTO entries (protocol_id, participant_id, content)
-      VALUES (v_protocol_id, v_participant.id, '');
   END LOOP;
+
+  -- Feste Sektionen anlegen (leer)
+  INSERT INTO entries (protocol_id, section, content, sort_order) VALUES
+    (v_protocol_id, 'betriebsrat', '', 1),
+    (v_protocol_id, 'sonstiges', '', 99);
 
   RETURN v_protocol_id;
 END;

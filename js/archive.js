@@ -2,6 +2,15 @@
 // Archiv-Seite
 // ===========================================
 
+const CATEGORY_LABELS = {
+  aerzte: 'Ärzte',
+  sozialberatung: 'Sozialberatung',
+  bgf: 'Betriebliche Gesundheitsförderung',
+  wd_orga: 'WD-Organisation',
+  sanitaeter: 'Notfall-/Rettungssanitäter',
+  betriebsrat: 'Betriebsratsmitglied',
+};
+
 const Archive = {
   supabase: null,
 
@@ -46,19 +55,17 @@ const Archive = {
   },
 
   async showProtocol(proto) {
-    // Lade Eintraege mit Teilnehmer-Info
     const { data: entries } = await this.supabase
       .from('entries')
-      .select('*, participants(name, category)')
+      .select('*')
       .eq('protocol_id', proto.id)
-      .order('created_at');
+      .order('sort_order');
 
     const { data: attendance } = await this.supabase
       .from('attendance')
-      .select('*, participants(name)')
+      .select('*, participants(name, category)')
       .eq('protocol_id', proto.id);
 
-    // Modal mit Inhalt anzeigen
     const modal = document.getElementById('archive-modal');
     const content = document.getElementById('archive-modal-content');
 
@@ -73,19 +80,32 @@ const Archive = {
       <p style="margin-bottom:16px"><strong>Abwesend:</strong> ${absent.join(', ') || '-'}</p>
     `;
 
-    const categories = { meister: 'Meister', pitstop: 'Pitstop / Instandhaltung', logistik: 'Logistik' };
-    for (const [catKey, catLabel] of Object.entries(categories)) {
-      const catEntries = (entries || []).filter(e => e.participants.category === catKey && e.content.trim());
-      if (catEntries.length === 0) continue;
-      html += `<h3 style="margin-top:20px;font-size:14px;text-transform:uppercase;color:var(--mb-gray-500)">${catLabel}</h3>`;
-      for (const entry of catEntries) {
+    // Bericht Betriebsrat
+    const brEntry = (entries || []).find(e => e.section === 'betriebsrat' && e.content.trim());
+    if (brEntry) {
+      html += `<h3 style="margin-top:20px;font-size:14px;text-transform:uppercase;color:var(--mb-gray-500)">Bericht Betriebsrat</h3>`;
+      html += `<div style="background:var(--mb-gray-100);padding:12px;border-radius:4px;margin:8px 0;white-space:pre-wrap">${this.escapeHtml(brEntry.content)}</div>`;
+    }
+
+    // Blitzlicht
+    const blitzEntries = (entries || []).filter(e => e.section === 'blitzlicht' && e.content.trim());
+    if (blitzEntries.length > 0) {
+      html += `<h3 style="margin-top:20px;font-size:14px;text-transform:uppercase;color:var(--mb-gray-500)">Berichte / Blitzlicht</h3>`;
+      for (const entry of blitzEntries) {
         html += `
           <div style="background:var(--mb-gray-100);padding:12px;border-radius:4px;margin:8px 0">
-            <strong>${entry.participants.name}</strong>
+            <strong>${this.escapeHtml(entry.author_name || 'Unbekannt')}</strong>
             <div style="margin-top:6px;white-space:pre-wrap">${this.escapeHtml(entry.content)}</div>
           </div>
         `;
       }
+    }
+
+    // Sonstiges
+    const sonstigesEntry = (entries || []).find(e => e.section === 'sonstiges' && e.content.trim());
+    if (sonstigesEntry) {
+      html += `<h3 style="margin-top:20px;font-size:14px;text-transform:uppercase;color:var(--mb-gray-500)">Sonstiges</h3>`;
+      html += `<div style="background:var(--mb-gray-100);padding:12px;border-radius:4px;margin:8px 0;white-space:pre-wrap">${this.escapeHtml(sonstigesEntry.content)}</div>`;
     }
 
     content.innerHTML = html;
