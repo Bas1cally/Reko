@@ -156,5 +156,4 @@ function bindDeleteButtons(scope) {
     });
 }
 
-// Bind existing delete buttons
 bindDeleteButtons();

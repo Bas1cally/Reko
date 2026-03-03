@@ -74,10 +74,8 @@ def archive_protocol(protocol):
     for entry in Entry.query.filter_by(protocol_id=protocol.id).all():
         entries_map[entry.participant_id] = entry
 
-    # Generate PDF
     pdf_filename = f"Reko_KW{protocol.calendar_week}_{protocol.year}.pdf"
-    archive_dir = Config.ARCHIVE_PATH
-    pdf_path = os.path.join(archive_dir, pdf_filename)
+    pdf_path = os.path.join(Config.ARCHIVE_PATH, pdf_filename)
 
     generate_pdf(protocol, participants_by_cat, attendance_map, entries_map, pdf_path)
 
@@ -137,12 +135,10 @@ def protocol_view(protocol_id):
     protocol = Protocol.query.get_or_404(protocol_id)
     participants_by_cat = get_participants_by_category()
 
-    # Build attendance map
     attendance_map = {}
     for att in Attendance.query.filter_by(protocol_id=protocol.id).all():
         attendance_map[att.participant_id] = att
 
-    # Build entries map
     entries_map = {}
     for entry in Entry.query.filter_by(protocol_id=protocol.id).all():
         entries_map[entry.participant_id] = entry
@@ -240,7 +236,6 @@ def upload_file():
     if not protocol.is_editable:
         return jsonify({"error": "Protokoll ist gesperrt."}), 403
 
-    # Ensure entry exists
     entry = Entry.query.filter_by(
         protocol_id=protocol_id, participant_id=participant_id
     ).first()
@@ -249,7 +244,6 @@ def upload_file():
         db.session.add(entry)
         db.session.commit()
 
-    # Save file
     original_name = secure_filename(file.filename)
     unique_name = f"{uuid.uuid4().hex}_{original_name}"
     upload_dir = os.path.join(Config.UPLOAD_FOLDER, str(protocol_id))

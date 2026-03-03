@@ -11,11 +11,9 @@ class Protocol(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     calendar_week = db.Column(db.Integer, nullable=False)
     year = db.Column(db.Integer, nullable=False)
-    week_start = db.Column(db.Date, nullable=False)  # Monday
-    week_end = db.Column(db.Date, nullable=False)  # Friday (Reko day)
-    status = db.Column(
-        db.String(20), default="active"
-    )  # active, locked, archived
+    week_start = db.Column(db.Date, nullable=False)
+    week_end = db.Column(db.Date, nullable=False)
+    status = db.Column(db.String(20), default="active")
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     archived_at = db.Column(db.DateTime, nullable=True)
     pdf_path = db.Column(db.String(500), nullable=True)
@@ -38,7 +36,6 @@ class Protocol(db.Model):
     @staticmethod
     def create_for_current_week():
         today = date.today()
-        # ISO calendar: Monday = 1, Sunday = 7
         monday = today - timedelta(days=today.weekday())
         friday = monday + timedelta(days=4)
         iso = today.isocalendar()
@@ -58,7 +55,6 @@ class Protocol(db.Model):
         )
         db.session.add(protocol)
         db.session.commit()
-
         return protocol
 
 
@@ -132,22 +128,17 @@ def seed_participants():
         return
 
     participants = [
-        # Ärzte
         ("Dr. Frei, Markus", "Ärzte", 1),
         ("Dr. Schmidt, Sabine", "Ärzte", 2),
         ("Dr. Vitez, Lilla", "Ärzte", 3),
-        # Sozialberatung
         ("Walther, Katja", "Sozialberatung", 10),
         ("Völkering, Katharina", "Sozialberatung", 11),
         ("Gürsel, Helin", "Sozialberatung", 12),
-        # BGF
         ("Zieger-Buchta, Katrin", "Betriebliche Gesundheitsförderung", 20),
         ("Müller-Horn, Susanne", "Betriebliche Gesundheitsförderung", 21),
         ("Krempl, Lara", "Betriebliche Gesundheitsförderung", 22),
-        # WD-Organisation
         ("Schmidt, Emily-Kim", "WD-Organisation", 30),
         ("Radimersky, Larissa", "WD-Organisation", 31),
-        # Sanitäter
         ("Putschler, Walter", "Notfall-/Rettungssanitäter", 40),
         ("Krempl, Elke", "Notfall-/Rettungssanitäter", 41),
         ("Breig, Bernd", "Notfall-/Rettungssanitäter", 42),

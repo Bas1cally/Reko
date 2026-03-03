@@ -7,6 +7,9 @@ try:
 except ImportError:
     HAS_WEASYPRINT = False
 
+DASH = "\u2014"
+NO_ENTRIES = '<p style="color:#999;">Keine Eintr\u00e4ge vorhanden.</p>'
+
 
 def generate_pdf(protocol, participants_by_category, attendance_map, entries_map, output_path):
     """Generate a PDF for an archived protocol. Falls back to HTML if weasyprint is unavailable."""
@@ -15,13 +18,14 @@ def generate_pdf(protocol, participants_by_category, attendance_map, entries_map
     for category, participants in participants_by_category.items():
         for p in participants:
             att = attendance_map.get(p.id)
-            status = "Anwesend" if att and att.present else "—"
+            status = "Anwesend" if att and att.present else DASH
+            css_class = "present" if att and att.present else "absent"
             timestamp = att.checked_at.strftime("%H:%M") if att and att.checked_at else ""
             attendance_rows += f"""
             <tr>
                 <td>{p.name}</td>
                 <td>{category}</td>
-                <td class="{'present' if att and att.present else 'absent'}">{status}</td>
+                <td class="{css_class}">{status}</td>
                 <td>{timestamp}</td>
             </tr>"""
 
@@ -32,9 +36,8 @@ def generate_pdf(protocol, participants_by_category, attendance_map, entries_map
             if entry and entry.content.strip():
                 attachment_html = ""
                 if entry.attachments:
-                    attachment_html = "<p class='attachments'>Anhänge: "
-                    attachment_html += ", ".join(a.original_name for a in entry.attachments)
-                    attachment_html += "</p>"
+                    names = ", ".join(a.original_name for a in entry.attachments)
+                    attachment_html = f"<p class='attachments'>Anh\u00e4nge: {names}</p>"
 
                 entry_sections += f"""
                 <div class="entry">
@@ -42,6 +45,10 @@ def generate_pdf(protocol, participants_by_category, attendance_map, entries_map
                     <div class="entry-content">{entry.content}</div>
                     {attachment_html}
                 </div>"""
+
+    berichte = entry_sections if entry_sections else NO_ENTRIES
+    week_range = f"{protocol.week_start.strftime('%d.%m.%Y')} {DASH} {protocol.week_end.strftime('%d.%m.%Y')}"
+    archived_date = datetime.now().strftime("%d.%m.%Y %H:%M")
 
     html_content = f"""<!DOCTYPE html>
 <html lang="de">
@@ -68,8 +75,8 @@ def generate_pdf(protocol, participants_by_category, attendance_map, entries_map
 <body>
     <h1>Reko-Protokoll {protocol.label}</h1>
     <p class="meta">
-        Woche: {protocol.week_start.strftime('%d.%m.%Y')} — {protocol.week_end.strftime('%d.%m.%Y')}<br>
-        Archiviert am: {datetime.now().strftime('%d.%m.%Y %H:%M')}
+        Woche: {week_range}<br>
+        Archiviert am: {archived_date}
     </p>
 
     <h2>Anwesenheit</h2>
@@ -81,10 +88,10 @@ def generate_pdf(protocol, participants_by_category, attendance_map, entries_map
     </table>
 
     <h2>Berichte</h2>
-    {entry_sections if entry_sections else '<p style="color:#999;">Keine Einträge vorhanden.</p>'}
+    {berichte}
 
     <div class="footer">
-        Automatisch generiert — Reko-Protokoll-System
+        Automatisch generiert {DASH} Reko-Protokoll-System
     </div>
 </body>
 </html>"""
@@ -94,7 +101,6 @@ def generate_pdf(protocol, participants_by_category, attendance_map, entries_map
     if HAS_WEASYPRINT:
         HTML(string=html_content).write_pdf(output_path)
     else:
-        # Fallback: save as HTML file
         html_path = output_path.rsplit(".", 1)[0] + ".html"
         with open(html_path, "w", encoding="utf-8") as f:
             f.write(html_content)
