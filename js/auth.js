@@ -1,44 +1,38 @@
 // ===========================================
-// Auth - Shared Login via Supabase Email Auth
+// Auth - Einfache Namens-Auswahl (kein Passwort)
 // ===========================================
-// In Supabase einen User anlegen:
-//   Email: reko@team.local
-//   Password: (euer Gruppenpasswort)
-
-const AUTH_EMAIL = 'reko@team.local';
 
 const Auth = {
-  supabase: null,
+  storageKey: 'reko_user',
 
-  init(supabaseClient) {
-    this.supabase = supabaseClient;
+  // Aktuellen User aus localStorage lesen
+  getUser() {
+    const raw = localStorage.getItem(this.storageKey);
+    if (!raw) return null;
+    try { return JSON.parse(raw); } catch { return null; }
   },
 
-  async login(password) {
-    const { data, error } = await this.supabase.auth.signInWithPassword({
-      email: AUTH_EMAIL,
-      password: password,
-    });
-    if (error) throw error;
-    return data;
+  // User setzen (nach Namens-Auswahl)
+  setUser(participant) {
+    localStorage.setItem(this.storageKey, JSON.stringify({
+      id: participant.id,
+      name: participant.name,
+    }));
   },
 
-  async logout() {
-    await this.supabase.auth.signOut();
+  // Abmelden
+  logout() {
+    localStorage.removeItem(this.storageKey);
     window.location.href = 'index.html';
   },
 
-  async getSession() {
-    const { data: { session } } = await this.supabase.auth.getSession();
-    return session;
-  },
-
-  async requireAuth() {
-    const session = await this.getSession();
-    if (!session) {
+  // Pruefen ob eingeloggt, sonst redirect
+  requireAuth() {
+    const user = this.getUser();
+    if (!user) {
       window.location.href = 'index.html';
       return null;
     }
-    return session;
-  }
+    return user;
+  },
 };
