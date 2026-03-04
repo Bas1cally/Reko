@@ -416,36 +416,56 @@ const App = {
   // ===========================================
   async closeWeek() {
     // Daten fuer PDF sammeln
-    const attendance = await this.supabase
+    const { data: attData, error: attErr } = await this.supabase
       .from('attendance')
       .select('*, participants(name, category)')
       .eq('protocol_id', this.protocol.id);
 
-    const entries = await this.supabase
+    if (attErr) throw new Error('Anwesenheit konnte nicht geladen werden: ' + attErr.message);
+
+    const { data: entData, error: entErr } = await this.supabase
       .from('entries')
       .select('*')
       .eq('protocol_id', this.protocol.id)
       .order('sort_order');
 
-    // PDF generieren und herunterladen
-    this.generatePDF(this.protocol, attendance.data || [], entries.data || []);
+    if (entErr) throw new Error('Eintraege konnten nicht geladen werden: ' + entErr.message);
 
-    // Lesebestaetigung fuer alle aktiven Teilnehmer anlegen
-    const confirmInserts = this.participants.map(p => ({
-      calendar_week: this.protocol.calendar_week,
-      year: this.protocol.year,
-      participant_id: p.id,
-      confirmed: false,
-    }));
-    if (confirmInserts.length > 0) {
-      await this.supabase.from('read_confirmations').insert(confirmInserts);
+    // PDF generieren und herunterladen
+    if (!window.jspdf) {
+      throw new Error('PDF-Bibliothek (jsPDF) nicht geladen. Bitte Seite neu laden.');
+    }
+    this.generatePDF(this.protocol, attData || [], entData || []);
+
+    // Lesebestaetigung fuer alle aktiven Teilnehmer anlegen (optional, Tabelle muss existieren)
+    try {
+      const confirmInserts = this.participants.map(p => ({
+        calendar_week: this.protocol.calendar_week,
+        year: this.protocol.year,
+        participant_id: p.id,
+        confirmed: false,
+      }));
+      if (confirmInserts.length > 0) {
+        await this.supabase.from('read_confirmations').insert(confirmInserts);
+      }
+    } catch (e) {
+      console.warn('Lesebestaetigungen konnten nicht angelegt werden:', e);
     }
 
     // Protokoll-Daten komplett loeschen (CASCADE loescht entries, attendance, attachments)
-    await this.supabase
+    const { error: delErr } = await this.supabase
       .from('protocols')
       .delete()
       .eq('id', this.protocol.id);
+
+    if (delErr) {
+      console.warn('Protokoll konnte nicht geloescht werden:', delErr.message);
+      // Alternativ: als archived markieren
+      await this.supabase
+        .from('protocols')
+        .update({ status: 'archived' })
+        .eq('id', this.protocol.id);
+    }
 
     // Seite neu laden -> neues leeres Protokoll wird erstellt
     window.location.reload();

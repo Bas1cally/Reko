@@ -78,8 +78,17 @@
       document.getElementById('close-week-modal').classList.remove('open');
     }
     async function doCloseWeek() {
-      closeModal();
-      await App.closeWeek();
+      const btn = document.querySelector('#close-week-modal .btn-primary');
+      btn.textContent = 'PDF wird erstellt...';
+      btn.disabled = true;
+      try {
+        await App.closeWeek();
+      } catch (err) {
+        console.error('Fehler beim Abschliessen:', err);
+        alert('Fehler: ' + err.message);
+        btn.textContent = 'PDF erstellen & abschliessen';
+        btn.disabled = false;
+      }
     }
   </script>
 </body>
