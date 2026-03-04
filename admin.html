@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ReKo - Verwaltung</title>
+  <link rel="stylesheet" href="css/style.css?v=6">
+</head>
+<body>
+  <!-- Header -->
+  <div class="header">
+    <h1>ReKo Protokoll</h1>
+    <span class="kw-badge">Verwaltung</span>
+    <div class="header-actions">
+      <button onclick="window.location.href='protocol.html'">Protokoll</button>
+      <button onclick="Auth.logout()">Wechseln</button>
+    </div>
+  </div>
+
+  <!-- PIN Gate -->
+  <div id="pin-gate" class="login-container" style="position:fixed;inset:0;z-index:500">
+    <div class="login-box" style="max-width:340px">
+      <h1>Verwaltung</h1>
+      <p>Admin-PIN eingeben</p>
+      <div style="display:flex;gap:8px;justify-content:center">
+        <input type="password" id="pin-input" maxlength="4" inputmode="numeric" pattern="[0-9]*"
+          class="admin-input" style="width:120px;text-align:center;font-size:24px;letter-spacing:8px"
+          placeholder="****" autocomplete="off">
+      </div>
+      <div id="pin-error" style="color:var(--mb-red);font-size:13px;margin-top:10px;display:none">Falscher PIN</div>
+      <button class="btn btn-primary" style="margin-top:16px" onclick="Admin.checkPin()">Weiter</button>
+    </div>
+  </div>
+
+  <!-- Main -->
+  <div class="main" style="display:none" id="admin-main">
+    <div id="admin-loading" class="loading">
+      <div class="spinner"></div>
+      <p>Lade Daten...</p>
+    </div>
+
+    <div id="admin-content" style="display:none">
+      <!-- Lesebestaetigungen Uebersicht -->
+      <div id="confirmations-overview" class="admin-add-section" style="display:none">
+        <h2>Lesebestaetigungen</h2>
+        <div id="confirmations-admin-list"></div>
+      </div>
+
+      <!-- Neuen Teilnehmer hinzufuegen -->
+      <div class="admin-add-section">
+        <h2>Neuen Teilnehmer hinzufuegen</h2>
+        <div class="admin-add-form">
+          <input type="text" id="add-name" placeholder="Name (z.B. Mustermann, Max)" class="admin-input">
+          <select id="add-category" class="admin-input">
+            <option value="">Kategorie waehlen...</option>
+            <option value="aerzte">Aerzte</option>
+            <option value="sozialberatung">Sozialberatung</option>
+            <option value="bgf">Betriebliche Gesundheitsfoerderung</option>
+            <option value="wd_orga">WD-Organisation</option>
+            <option value="sanitaeter">Notfall-/Rettungssanitaeter</option>
+            <option value="betriebsrat">Betriebsratsmitglied</option>
+          </select>
+          <button class="btn btn-primary" onclick="Admin.addParticipant()">Hinzufuegen</button>
+        </div>
+      </div>
+
+      <!-- Aktive Teilnehmer -->
+      <div id="active-list"></div>
+
+      <!-- Inaktive Teilnehmer -->
+      <div id="inactive-section" style="display:none">
+        <div class="category-header" style="margin-top:32px;color:var(--mb-gray-500)">Deaktivierte Teilnehmer</div>
+        <div id="inactive-list"></div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="js/config.js?v=6"></script>
+  <script src="js/auth.js?v=6"></script>
+  <script src="js/admin.js?v=6"></script>
+  <script>
+    Admin.init();
+  </script>
+</body>
+</html>
