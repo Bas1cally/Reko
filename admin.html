@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ReKo - Verwaltung</title>
+  <link rel="stylesheet" href="css/style.css?v=5">
+</head>
+<body>
+  <!-- Header -->
+  <div class="header">
+    <h1>ReKo Protokoll</h1>
+    <span class="kw-badge">Verwaltung</span>
+    <div class="header-actions">
+      <button onclick="window.location.href='protocol.html'">Protokoll</button>
+      <button onclick="Auth.logout()">Wechseln</button>
+    </div>
+  </div>
+
+  <!-- Main -->
+  <div class="main">
+    <div id="admin-loading" class="loading">
+      <div class="spinner"></div>
+      <p>Lade Teilnehmer...</p>
+    </div>
+
+    <div id="admin-content" style="display:none">
+      <!-- Neuen Teilnehmer hinzufuegen -->
+      <div class="admin-add-section">
+        <h2>Neuen Teilnehmer hinzufuegen</h2>
+        <div class="admin-add-form">
+          <input type="text" id="add-name" placeholder="Name (z.B. Mustermann, Max)" class="admin-input">
+          <select id="add-category" class="admin-input">
+            <option value="">Kategorie waehlen...</option>
+            <option value="aerzte">Aerzte</option>
+            <option value="sozialberatung">Sozialberatung</option>
+            <option value="bgf">Betriebliche Gesundheitsfoerderung</option>
+            <option value="wd_orga">WD-Organisation</option>
+            <option value="sanitaeter">Notfall-/Rettungssanitaeter</option>
+            <option value="betriebsrat">Betriebsratsmitglied</option>
+          </select>
+          <button class="btn btn-primary" onclick="Admin.addParticipant()">Hinzufuegen</button>
+        </div>
+      </div>
+
+      <!-- Aktive Teilnehmer -->
+      <div id="active-list"></div>
+
+      <!-- Inaktive Teilnehmer -->
+      <div id="inactive-section" style="display:none">
+        <div class="category-header" style="margin-top:32px;color:var(--mb-gray-500)">Deaktivierte Teilnehmer</div>
+        <div id="inactive-list"></div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="js/config.js?v=5"></script>
+  <script src="js/auth.js?v=5"></script>
+  <script src="js/admin.js?v=5"></script>
+  <script>
+    Admin.init();
+  </script>
+</body>
+</html>

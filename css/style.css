@@ -464,6 +464,59 @@ body {
 }
 @keyframes spin { to { transform: rotate(360deg); } }
 
+/* === ADMIN === */
+.admin-add-section {
+  background: var(--mb-white);
+  border-radius: var(--radius);
+  padding: 20px;
+  margin-bottom: 24px;
+}
+.admin-add-section h2 {
+  font-size: 16px;
+  margin-bottom: 14px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--mb-gray-200);
+}
+.admin-add-form {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+.admin-input {
+  padding: 8px 12px;
+  border: 1px solid var(--mb-gray-300);
+  border-radius: var(--radius);
+  font-size: 14px;
+  font-family: inherit;
+  min-width: 200px;
+}
+.admin-input:focus {
+  outline: none;
+  border-color: var(--mb-black);
+}
+.admin-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 16px;
+  background: var(--mb-white);
+  border-radius: var(--radius);
+  margin-bottom: 6px;
+}
+.admin-row-name {
+  font-size: 14px;
+  font-weight: 500;
+}
+.admin-row-actions {
+  display: flex;
+  gap: 8px;
+}
+.btn-sm {
+  padding: 4px 12px;
+  font-size: 12px;
+}
+
 /* === RESPONSIVE === */
 @media (max-width: 768px) {
   .header { padding: 12px 16px; }

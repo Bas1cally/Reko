@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>ReKo Protokoll</title>
-  <link rel="stylesheet" href="css/style.css?v=4">
+  <link rel="stylesheet" href="css/style.css?v=5">
 </head>
 <body>
   <!-- Header -->
@@ -14,6 +14,7 @@
     <div class="header-actions">
       <span id="current-user" style="color:var(--mb-gray-300);font-size:13px;margin-right:4px"></span>
       <button onclick="window.location.href='archive.html'">Archiv</button>
+      <button onclick="window.location.href='admin.html'">Verwaltung</button>
       <button id="btn-archive-protocol" onclick="confirmArchive()">Woche abschliessen</button>
       <button onclick="Auth.logout()">Wechseln</button>
     </div>
@@ -58,9 +59,9 @@
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="js/config.js?v=4"></script>
-  <script src="js/auth.js?v=4"></script>
-  <script src="js/app.js?v=4"></script>
+  <script src="js/config.js?v=5"></script>
+  <script src="js/auth.js?v=5"></script>
+  <script src="js/app.js?v=5"></script>
   <script>
     App.init();
 
