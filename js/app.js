@@ -60,7 +60,6 @@ const App = {
     const { data } = await this.supabase
       .from('participants')
       .select('*')
-      .eq('active', true)
       .order('sort_order');
     this.participants = data || [];
   },

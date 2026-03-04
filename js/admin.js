@@ -140,16 +140,13 @@ const Admin = {
       .select('*')
       .order('sort_order');
 
-    const active = (all || []).filter(p => p.active);
-    const inactive = (all || []).filter(p => !p.active);
-
-    // Aktive nach Kategorie
     const activeList = document.getElementById('active-list');
     activeList.innerHTML = '';
 
-    const categories = [...new Set(active.map(p => p.category))];
+    const participants = all || [];
+    const categories = [...new Set(participants.map(p => p.category))];
     for (const cat of categories) {
-      const catParts = active.filter(p => p.category === cat);
+      const catParts = participants.filter(p => p.category === cat);
       const label = CATEGORY_LABELS[cat] || cat;
 
       const group = document.createElement('div');
@@ -157,66 +154,39 @@ const Admin = {
       group.innerHTML = `<div class="category-header">${label}</div>`;
 
       for (const p of catParts) {
-        group.appendChild(this.createParticipantRow(p, true));
+        group.appendChild(this.createParticipantRow(p));
       }
       activeList.appendChild(group);
-    }
-
-    // Inaktive
-    const inactiveSection = document.getElementById('inactive-section');
-    const inactiveList = document.getElementById('inactive-list');
-    inactiveList.innerHTML = '';
-
-    if (inactive.length > 0) {
-      inactiveSection.style.display = 'block';
-      for (const p of inactive) {
-        inactiveList.appendChild(this.createParticipantRow(p, false));
-      }
-    } else {
-      inactiveSection.style.display = 'none';
     }
 
     document.getElementById('admin-loading').style.display = 'none';
     document.getElementById('admin-content').style.display = 'block';
   },
 
-  createParticipantRow(participant, isActive) {
+  createParticipantRow(participant) {
     const row = document.createElement('div');
     row.className = 'admin-row';
 
     const nameSpan = document.createElement('span');
     nameSpan.className = 'admin-row-name';
     nameSpan.textContent = participant.name;
-    if (!isActive) nameSpan.style.opacity = '0.5';
 
     const actions = document.createElement('div');
     actions.className = 'admin-row-actions';
 
-    if (isActive) {
-      const deactivateBtn = document.createElement('button');
-      deactivateBtn.className = 'btn btn-secondary btn-sm';
-      deactivateBtn.textContent = 'Deaktivieren';
-      deactivateBtn.addEventListener('click', () => this.toggleActive(participant.id, false));
-      actions.appendChild(deactivateBtn);
-    } else {
-      const activateBtn = document.createElement('button');
-      activateBtn.className = 'btn btn-primary btn-sm';
-      activateBtn.textContent = 'Reaktivieren';
-      activateBtn.addEventListener('click', () => this.toggleActive(participant.id, true));
-      actions.appendChild(activateBtn);
-    }
+    const deleteBtn = document.createElement('button');
+    deleteBtn.className = 'btn btn-danger btn-sm';
+    deleteBtn.textContent = 'Loeschen';
+    deleteBtn.addEventListener('click', async () => {
+      if (!confirm(`${participant.name} wirklich loeschen?`)) return;
+      await this.supabase.from('participants').delete().eq('id', participant.id);
+      await this.loadParticipants();
+    });
+    actions.appendChild(deleteBtn);
 
     row.appendChild(nameSpan);
     row.appendChild(actions);
     return row;
-  },
-
-  async toggleActive(participantId, active) {
-    await this.supabase
-      .from('participants')
-      .update({ active })
-      .eq('id', participantId);
-    await this.loadParticipants();
   },
 
   async addParticipant() {
