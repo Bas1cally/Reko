@@ -17,8 +17,23 @@
     </div>
   </div>
 
+  <!-- PIN Gate -->
+  <div id="pin-gate" class="login-container" style="position:fixed;inset:0;z-index:500">
+    <div class="login-box" style="max-width:340px">
+      <h1>Verwaltung</h1>
+      <p>Admin-PIN eingeben</p>
+      <div style="display:flex;gap:8px;justify-content:center">
+        <input type="password" id="pin-input" maxlength="4" inputmode="numeric" pattern="[0-9]*"
+          class="admin-input" style="width:120px;text-align:center;font-size:24px;letter-spacing:8px"
+          placeholder="****" autocomplete="off">
+      </div>
+      <div id="pin-error" style="color:var(--mb-red);font-size:13px;margin-top:10px;display:none">Falscher PIN</div>
+      <button class="btn btn-primary" style="margin-top:16px" onclick="Admin.checkPin()">Weiter</button>
+    </div>
+  </div>
+
   <!-- Main -->
-  <div class="main">
+  <div class="main" style="display:none" id="admin-main">
     <div id="admin-loading" class="loading">
       <div class="spinner"></div>
       <p>Lade Teilnehmer...</p>

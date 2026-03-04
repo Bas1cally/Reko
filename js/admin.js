@@ -11,6 +11,8 @@ const CATEGORY_LABELS = {
   betriebsrat: 'Betriebsratsmitglied',
 };
 
+const ADMIN_PIN = '0054';
+
 const Admin = {
   supabase: null,
 
@@ -20,7 +22,27 @@ const Admin = {
     const user = Auth.requireAuth();
     if (!user) return;
 
-    await this.loadParticipants();
+    // PIN-Eingabe: Enter-Taste
+    const pinInput = document.getElementById('pin-input');
+    pinInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') this.checkPin();
+    });
+    pinInput.focus();
+  },
+
+  checkPin() {
+    const input = document.getElementById('pin-input');
+    const error = document.getElementById('pin-error');
+
+    if (input.value === ADMIN_PIN) {
+      document.getElementById('pin-gate').style.display = 'none';
+      document.getElementById('admin-main').style.display = 'block';
+      this.loadParticipants();
+    } else {
+      error.style.display = 'block';
+      input.value = '';
+      input.focus();
+    }
   },
 
   async loadParticipants() {
