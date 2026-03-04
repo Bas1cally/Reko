@@ -431,15 +431,28 @@ const App = {
 
     if (entErr) throw new Error('Eintraege konnten nicht geladen werden: ' + entErr.message);
 
+    // Anhaenge fuer alle Entries laden
+    const allEntries = entData || [];
+    const entryAttachments = {};
+    for (const entry of allEntries) {
+      const { data: atts } = await this.supabase
+        .from('attachments')
+        .select('*')
+        .eq('entry_id', entry.id);
+      if (atts && atts.length > 0) entryAttachments[entry.id] = atts;
+    }
+
     // PDF generieren und herunterladen
     if (!window.jspdf) {
       throw new Error('PDF-Bibliothek (jsPDF) nicht geladen. Bitte Seite neu laden.');
     }
-    this.generatePDF(this.protocol, attData || [], entData || []);
+    await this.generatePDF(this.protocol, attData || [], allEntries, entryAttachments);
 
-    // Lesebestaetigung fuer alle aktiven Teilnehmer anlegen (optional, Tabelle muss existieren)
+    // Lesebestaetigung nur fuer ABWESENDE Teilnehmer (Anwesende waren live dabei)
     try {
-      const confirmInserts = this.participants.map(p => ({
+      const presentIds = new Set((attData || []).filter(a => a.present).map(a => a.participant_id));
+      const absentParticipants = this.participants.filter(p => !presentIds.has(p.id));
+      const confirmInserts = absentParticipants.map(p => ({
         calendar_week: this.protocol.calendar_week,
         year: this.protocol.year,
         participant_id: p.id,
@@ -467,14 +480,15 @@ const App = {
         .eq('id', this.protocol.id);
     }
 
-    // Seite neu laden -> neues leeres Protokoll wird erstellt
+    // Kurz warten damit der PDF-Download starten kann, dann neu laden
+    await new Promise(r => setTimeout(r, 1500));
     window.location.reload();
   },
 
   // ===========================================
   // PDF Generierung
   // ===========================================
-  generatePDF(proto, attendance, entries) {
+  async generatePDF(proto, attendance, entries, entryAttachments) {
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF({ unit: 'mm', format: 'a4' });
     const pageW = doc.internal.pageSize.getWidth();
@@ -482,6 +496,8 @@ const App = {
     const margin = 20;
     const maxW = pageW - 2 * margin;
     let y = margin;
+
+    const IMAGE_EXTS = ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp'];
 
     const checkPage = (needed) => {
       if (y + needed > pageH - margin) {
@@ -505,6 +521,8 @@ const App = {
       doc.setTextColor(...(color || [0, 0, 0]));
     };
 
+    const URL_REGEX = /https?:\/\/[^\s,)>\]]+/g;
+
     const writeWrapped = (text, size, style, color) => {
       addText(text, size, style, color);
       const lines = doc.splitTextToSize(text, maxW);
@@ -512,6 +530,67 @@ const App = {
       checkPage(lines.length * lineH);
       doc.text(lines, margin, y);
       y += lines.length * lineH + 2;
+
+      // URLs als klickbare Links darunter auflisten
+      const urls = text.match(URL_REGEX);
+      if (urls && urls.length > 0) {
+        const uniqueUrls = [...new Set(urls)];
+        for (const url of uniqueUrls) {
+          checkPage(6);
+          doc.setFontSize(8);
+          doc.setTextColor(0, 90, 180);
+          doc.textWithLink(url, margin + 2, y, { url });
+          y += 4;
+        }
+        doc.setTextColor(0, 0, 0);
+      }
+    };
+
+    // Bild aus Supabase Storage laden und als Data-URL zurueckgeben
+    const loadImageAsDataUrl = async (storagePath) => {
+      try {
+        const { data } = await this.supabase.storage.from('attachments').download(storagePath);
+        if (!data) return null;
+        return new Promise((resolve) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result);
+          reader.onerror = () => resolve(null);
+          reader.readAsDataURL(data);
+        });
+      } catch { return null; }
+    };
+
+    // Anhaenge fuer einen Entry in PDF einfuegen
+    const addAttachments = async (entryId) => {
+      const atts = entryAttachments[entryId];
+      if (!atts || atts.length === 0) return;
+
+      for (const att of atts) {
+        const ext = att.original_name.split('.').pop().toLowerCase();
+        if (IMAGE_EXTS.includes(ext)) {
+          // Bild einbetten
+          const dataUrl = await loadImageAsDataUrl(att.storage_path);
+          if (dataUrl) {
+            const imgProps = doc.getImageProperties(dataUrl);
+            let imgW = maxW;
+            let imgH = (imgProps.height / imgProps.width) * imgW;
+            // Max 120mm hoch
+            if (imgH > 120) { imgH = 120; imgW = (imgProps.width / imgProps.height) * imgH; }
+            checkPage(imgH + 8);
+            addText('', 8, 'italic', [120, 120, 120]);
+            doc.text(att.original_name, margin, y);
+            y += 4;
+            doc.addImage(dataUrl, ext === 'png' ? 'PNG' : 'JPEG', margin, y, imgW, imgH);
+            y += imgH + 4;
+          }
+        } else {
+          // Nicht-Bild: als Texthinweis
+          checkPage(8);
+          addText('', 9, 'italic', [120, 120, 120]);
+          doc.text(`[Anhang: ${att.original_name}]`, margin, y);
+          y += 5;
+        }
+      }
     };
 
     // --- PDF Inhalt ---
@@ -545,6 +624,7 @@ const App = {
       checkPage(12);
       writeWrapped('BERICHT BETRIEBSRAT', 11, 'bold', [100, 100, 100]);
       writeWrapped(brEntry.content, 10, 'normal');
+      await addAttachments(brEntry.id);
       y += 4;
     }
 
@@ -557,6 +637,7 @@ const App = {
         checkPage(12);
         writeWrapped(entry.author_name || 'Unbekannt', 10, 'bold');
         writeWrapped(entry.content, 10, 'normal');
+        await addAttachments(entry.id);
         y += 2;
       }
       y += 2;
@@ -568,6 +649,7 @@ const App = {
       checkPage(12);
       writeWrapped('SONSTIGES', 11, 'bold', [100, 100, 100]);
       writeWrapped(sonstigesEntry.content, 10, 'normal');
+      await addAttachments(sonstigesEntry.id);
     }
 
     // Footer auf jeder Seite
