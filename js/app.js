@@ -467,7 +467,8 @@ const App = {
         .eq('id', this.protocol.id);
     }
 
-    // Seite neu laden -> neues leeres Protokoll wird erstellt
+    // Kurz warten damit der PDF-Download starten kann, dann neu laden
+    await new Promise(r => setTimeout(r, 1500));
     window.location.reload();
   },
 
