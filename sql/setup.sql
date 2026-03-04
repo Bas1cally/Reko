@@ -117,6 +117,7 @@ CREATE POLICY "anon delete attachments" ON attachments FOR DELETE TO anon USING 
 CREATE POLICY "anon read confirmations" ON read_confirmations FOR SELECT TO anon USING (true);
 CREATE POLICY "anon insert confirmations" ON read_confirmations FOR INSERT TO anon WITH CHECK (true);
 CREATE POLICY "anon update confirmations" ON read_confirmations FOR UPDATE TO anon USING (true);
+CREATE POLICY "anon delete confirmations" ON read_confirmations FOR DELETE TO anon USING (true);
 
 -- ===========================================
 -- HINWEIS: Storage Bucket manuell im Dashboard erstellen!

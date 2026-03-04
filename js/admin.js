@@ -91,11 +91,15 @@ const Admin = {
       deleteBtn.addEventListener('click', async (e) => {
         e.stopPropagation();
         if (!confirm(`Lesebestaetigungen fuer KW ${group.cw}/${group.year} wirklich loeschen?`)) return;
-        await this.supabase
+        const { error } = await this.supabase
           .from('read_confirmations')
           .delete()
           .eq('calendar_week', group.cw)
           .eq('year', group.year);
+        if (error) {
+          alert('Fehler beim Loeschen: ' + error.message);
+          return;
+        }
         section.remove();
         // Prüfen ob noch Bestaetigungen da sind
         if (container.children.length === 0) {
