@@ -20,10 +20,15 @@ const Auth = {
     }));
   },
 
-  // Abmelden
+  // Abmelden mit Redirect
   logout() {
     localStorage.removeItem(this.storageKey);
     window.location.href = 'index.html';
+  },
+
+  // Abmelden ohne Redirect (fuer Login-Seite)
+  logout_silent() {
+    localStorage.removeItem(this.storageKey);
   },
 
   // Pruefen ob eingeloggt, sonst redirect
