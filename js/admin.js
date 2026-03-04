@@ -76,17 +76,43 @@ const Admin = {
       section.style.marginBottom = '16px';
 
       const header = document.createElement('div');
-      header.style.cssText = 'font-weight:700;font-size:14px;margin-bottom:8px;cursor:pointer;display:flex;justify-content:space-between;align-items:center';
-      header.innerHTML = `
-        <span>KW ${group.cw} / ${group.year}</span>
-        <span style="font-size:12px;color:var(--mb-gray-500)">${confirmed} / ${total} bestaetigt</span>
-      `;
+      header.style.cssText = 'font-weight:700;font-size:14px;margin-bottom:8px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;gap:8px';
+
+      const headerLeft = document.createElement('span');
+      headerLeft.textContent = `KW ${group.cw} / ${group.year}`;
+
+      const headerRight = document.createElement('span');
+      headerRight.style.cssText = 'display:flex;align-items:center;gap:8px';
+      headerRight.innerHTML = `<span style="font-size:12px;color:var(--mb-gray-500)">${confirmed} / ${total} bestaetigt</span>`;
+
+      const deleteBtn = document.createElement('button');
+      deleteBtn.className = 'btn btn-danger btn-sm';
+      deleteBtn.textContent = 'Entfernen';
+      deleteBtn.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        if (!confirm(`Lesebestaetigungen fuer KW ${group.cw}/${group.year} wirklich loeschen?`)) return;
+        await this.supabase
+          .from('read_confirmations')
+          .delete()
+          .eq('calendar_week', group.cw)
+          .eq('year', group.year);
+        section.remove();
+        // Prüfen ob noch Bestaetigungen da sind
+        if (container.children.length === 0) {
+          document.getElementById('confirmations-overview').style.display = 'none';
+        }
+      });
+      headerRight.appendChild(deleteBtn);
+
+      header.appendChild(headerLeft);
+      header.appendChild(headerRight);
 
       const list = document.createElement('div');
       list.className = 'confirmation-status';
       list.style.display = 'none';
 
-      header.addEventListener('click', () => {
+      header.addEventListener('click', (e) => {
+        if (e.target.closest('button')) return;
         list.style.display = list.style.display === 'none' ? 'flex' : 'none';
       });
 

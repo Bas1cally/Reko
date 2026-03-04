@@ -172,7 +172,8 @@ const App = {
       for (const p of catParticipants) {
         const att = attendanceList.find(a => a.participant_id === p.id);
         const item = document.createElement('div');
-        item.className = 'attendance-item' + (att && att.present ? ' present' : '');
+        const isMe = this.currentUser && this.currentUser.id === p.id;
+        item.className = 'attendance-item' + (att && att.present ? ' present' : '') + (isMe ? ' is-me' : '');
         item.innerHTML = `<span class="check">&#10003;</span><span>${p.name}</span>`;
         item.addEventListener('click', () => this.toggleAttendance(p.id, item));
         items.appendChild(item);
@@ -211,8 +212,10 @@ const App = {
       textarea.value = entry.content || '';
       textarea.placeholder = `${title} ...`;
       textarea.addEventListener('input', () => {
+        this.autoResize(textarea);
         this.debounceSaveEntry(entry.id, textarea.value, card);
       });
+      requestAnimationFrame(() => this.autoResize(textarea));
 
       body.appendChild(textarea);
       card.appendChild(body);
@@ -283,8 +286,11 @@ const App = {
     textarea.value = entry.content || '';
     textarea.placeholder = `Bericht von ${entry.author_name || ''} ...`;
     textarea.addEventListener('input', () => {
+      this.autoResize(textarea);
       this.debounceSaveEntry(entry.id, textarea.value, card, header);
     });
+    // Initial resize nach Render
+    requestAnimationFrame(() => this.autoResize(textarea));
 
     body.appendChild(textarea);
 
@@ -315,6 +321,22 @@ const App = {
     card.appendChild(header);
     card.appendChild(body);
 
+    // Drag & Drop
+    let dragCounter = 0;
+    body.addEventListener('dragenter', (e) => { e.preventDefault(); dragCounter++; body.classList.add('drag-over'); });
+    body.addEventListener('dragleave', () => { dragCounter--; if (dragCounter <= 0) { dragCounter = 0; body.classList.remove('drag-over'); } });
+    body.addEventListener('dragover', (e) => e.preventDefault());
+    body.addEventListener('drop', (e) => {
+      e.preventDefault();
+      dragCounter = 0;
+      body.classList.remove('drag-over');
+      if (e.dataTransfer.files.length > 0) {
+        for (const file of e.dataTransfer.files) {
+          this.uploadFile(entry.id, file, fileList);
+        }
+      }
+    });
+
     // Vorhandene Anhaenge laden
     const attachments = await this.loadAttachments(entry.id);
     for (const att of attachments) {
@@ -322,6 +344,12 @@ const App = {
     }
 
     return card;
+  },
+
+  // --- Textarea Auto-Resize ---
+  autoResize(textarea) {
+    textarea.style.height = 'auto';
+    textarea.style.height = textarea.scrollHeight + 'px';
   },
 
   // --- Debounced Save ---
@@ -379,12 +407,29 @@ const App = {
   },
 
   addFileItem(container, attachment) {
+    const IMAGE_EXTS = ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp'];
+    const ext = attachment.original_name.split('.').pop().toLowerCase();
+    const isImage = IMAGE_EXTS.includes(ext);
+
     const item = document.createElement('div');
     item.className = 'file-item';
+
+    let thumbHtml = '';
+    if (isImage) {
+      // Thumbnail via Supabase public URL
+      const { data: urlData } = this.supabase.storage.from('attachments').getPublicUrl(attachment.storage_path);
+      if (urlData && urlData.publicUrl) {
+        thumbHtml = `<img src="${urlData.publicUrl}" class="file-thumb" alt="">`;
+      }
+    }
+
     item.innerHTML = `
-      <a href="#" onclick="App.downloadFile('${attachment.storage_path}', '${attachment.original_name}'); return false;">
-        ${attachment.original_name}
-      </a>
+      <div class="file-item-content">
+        ${thumbHtml}
+        <a href="#" onclick="App.downloadFile('${attachment.storage_path}', '${attachment.original_name}'); return false;">
+          ${attachment.original_name}
+        </a>
+      </div>
       <button class="remove-file" onclick="App.removeFile('${attachment.id}', '${attachment.storage_path}', this)">&times;</button>
     `;
     container.appendChild(item);

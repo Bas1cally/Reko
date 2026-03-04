@@ -216,6 +216,11 @@ body {
   border-color: var(--mb-green);
   color: var(--mb-white);
 }
+.attendance-item.is-me {
+  font-weight: 700;
+  box-shadow: 0 0 0 2px var(--mb-accent);
+  border-color: var(--mb-accent);
+}
 
 /* === CATEGORY SECTIONS === */
 .category-section {
@@ -271,13 +276,14 @@ body {
 }
 .entry-card textarea {
   width: 100%;
-  min-height: 120px;
+  min-height: 80px;
   border: 1px solid var(--mb-gray-200);
   border-radius: var(--radius);
   padding: 12px;
   font-family: inherit;
   font-size: 14px;
-  resize: vertical;
+  resize: none;
+  overflow: hidden;
   transition: border-color 0.2s;
   line-height: 1.5;
 }
@@ -307,6 +313,11 @@ body {
   border-color: var(--mb-black);
   color: var(--mb-black);
 }
+.entry-card-body.drag-over {
+  background: rgba(0, 173, 239, 0.06);
+  outline: 2px dashed var(--mb-accent);
+  outline-offset: -4px;
+}
 .file-list {
   margin-top: 8px;
   display: flex;
@@ -325,6 +336,19 @@ body {
 .file-item a {
   color: var(--mb-accent);
   text-decoration: none;
+}
+.file-item-content {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  overflow: hidden;
+}
+.file-thumb {
+  width: 40px;
+  height: 40px;
+  object-fit: cover;
+  border-radius: 3px;
+  flex-shrink: 0;
 }
 .file-item .remove-file {
   background: none;
