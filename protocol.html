@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>ReKo Protokoll</title>
-  <link rel="stylesheet" href="css/style.css?v=5">
+  <link rel="stylesheet" href="css/style.css?v=6">
 </head>
 <body>
   <!-- Header -->
@@ -13,9 +13,8 @@
     <span id="kw-badge" class="kw-badge">KW --</span>
     <div class="header-actions">
       <span id="current-user" style="color:var(--mb-gray-300);font-size:13px;margin-right:4px"></span>
-      <button onclick="window.location.href='archive.html'">Archiv</button>
       <button onclick="window.location.href='admin.html'">Verwaltung</button>
-      <button id="btn-archive-protocol" onclick="confirmArchive()">Woche abschliessen</button>
+      <button id="btn-close-week" onclick="confirmCloseWeek()">Woche abschliessen</button>
       <button onclick="Auth.logout()">Wechseln</button>
     </div>
   </div>
@@ -28,6 +27,12 @@
 
   <!-- Main Content -->
   <div id="app-content" class="main" style="display:none">
+    <!-- Lesebestaetigungen -->
+    <div id="confirmations-section" class="confirmations-section" style="display:none">
+      <h2>Offene Lesebestaetigungen</h2>
+      <div id="confirmations-list"></div>
+    </div>
+
     <!-- Wocheninfo -->
     <div class="week-info">
       <span id="week-dates"></span>
@@ -46,34 +51,35 @@
   <!-- Save Indicator -->
   <div id="save-indicator" class="save-indicator"></div>
 
-  <!-- Archive Confirmation Modal -->
-  <div id="archive-modal" class="modal-overlay">
+  <!-- Close Week Confirmation Modal -->
+  <div id="close-week-modal" class="modal-overlay">
     <div class="modal">
       <h2>Woche abschliessen?</h2>
-      <p>Das aktuelle Protokoll wird archiviert und eine neue Woche gestartet. Dieser Vorgang kann nicht rueckgaengig gemacht werden.</p>
+      <p>Das Protokoll wird als PDF heruntergeladen und anschliessend eine neue Woche gestartet. Bitte die PDF im lokalen Teams-Ordner speichern.</p>
       <div class="modal-actions">
-        <button class="btn btn-secondary" onclick="closeArchiveModal()">Abbrechen</button>
-        <button class="btn btn-primary" onclick="doArchive()">Abschliessen</button>
+        <button class="btn btn-secondary" onclick="closeModal()">Abbrechen</button>
+        <button class="btn btn-primary" onclick="doCloseWeek()">PDF erstellen &amp; abschliessen</button>
       </div>
     </div>
   </div>
 
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.2/jspdf.umd.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="js/config.js?v=5"></script>
-  <script src="js/auth.js?v=5"></script>
-  <script src="js/app.js?v=5"></script>
+  <script src="js/config.js?v=6"></script>
+  <script src="js/auth.js?v=6"></script>
+  <script src="js/app.js?v=6"></script>
   <script>
     App.init();
 
-    function confirmArchive() {
-      document.getElementById('archive-modal').classList.add('open');
+    function confirmCloseWeek() {
+      document.getElementById('close-week-modal').classList.add('open');
     }
-    function closeArchiveModal() {
-      document.getElementById('archive-modal').classList.remove('open');
+    function closeModal() {
+      document.getElementById('close-week-modal').classList.remove('open');
     }
-    async function doArchive() {
-      closeArchiveModal();
-      await App.archiveProtocol();
+    async function doCloseWeek() {
+      closeModal();
+      await App.closeWeek();
     }
   </script>
 </body>

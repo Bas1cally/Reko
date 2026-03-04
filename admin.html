@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>ReKo - Verwaltung</title>
-  <link rel="stylesheet" href="css/style.css?v=5">
+  <link rel="stylesheet" href="css/style.css?v=6">
 </head>
 <body>
   <!-- Header -->
@@ -36,10 +36,16 @@
   <div class="main" style="display:none" id="admin-main">
     <div id="admin-loading" class="loading">
       <div class="spinner"></div>
-      <p>Lade Teilnehmer...</p>
+      <p>Lade Daten...</p>
     </div>
 
     <div id="admin-content" style="display:none">
+      <!-- Lesebestaetigungen Uebersicht -->
+      <div id="confirmations-overview" class="admin-add-section" style="display:none">
+        <h2>Lesebestaetigungen</h2>
+        <div id="confirmations-admin-list"></div>
+      </div>
+
       <!-- Neuen Teilnehmer hinzufuegen -->
       <div class="admin-add-section">
         <h2>Neuen Teilnehmer hinzufuegen</h2>
@@ -70,9 +76,9 @@
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="js/config.js?v=5"></script>
-  <script src="js/auth.js?v=5"></script>
-  <script src="js/admin.js?v=5"></script>
+  <script src="js/config.js?v=6"></script>
+  <script src="js/auth.js?v=6"></script>
+  <script src="js/admin.js?v=6"></script>
   <script>
     Admin.init();
   </script>

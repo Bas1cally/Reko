@@ -38,11 +38,74 @@ const Admin = {
       document.getElementById('pin-gate').style.display = 'none';
       document.getElementById('admin-main').style.display = 'block';
       this.loadParticipants();
+      this.loadConfirmations();
     } else {
       error.style.display = 'block';
       input.value = '';
       input.focus();
     }
+  },
+
+  async loadConfirmations() {
+    // Alle Bestaetigungen laden, gruppiert nach KW
+    const { data: confirmations } = await this.supabase
+      .from('read_confirmations')
+      .select('*, participants(name)')
+      .order('year', { ascending: false })
+      .order('calendar_week', { ascending: false });
+
+    if (!confirmations || confirmations.length === 0) return;
+
+    const container = document.getElementById('confirmations-admin-list');
+    container.innerHTML = '';
+
+    // Nach KW gruppieren
+    const groups = {};
+    for (const c of confirmations) {
+      const key = `${c.year}-${c.calendar_week}`;
+      if (!groups[key]) groups[key] = { year: c.year, cw: c.calendar_week, items: [] };
+      groups[key].items.push(c);
+    }
+
+    for (const key of Object.keys(groups)) {
+      const group = groups[key];
+      const confirmed = group.items.filter(i => i.confirmed).length;
+      const total = group.items.length;
+
+      const section = document.createElement('div');
+      section.style.marginBottom = '16px';
+
+      const header = document.createElement('div');
+      header.style.cssText = 'font-weight:700;font-size:14px;margin-bottom:8px;cursor:pointer;display:flex;justify-content:space-between;align-items:center';
+      header.innerHTML = `
+        <span>KW ${group.cw} / ${group.year}</span>
+        <span style="font-size:12px;color:var(--mb-gray-500)">${confirmed} / ${total} bestaetigt</span>
+      `;
+
+      const list = document.createElement('div');
+      list.className = 'confirmation-status';
+      list.style.display = 'none';
+
+      header.addEventListener('click', () => {
+        list.style.display = list.style.display === 'none' ? 'flex' : 'none';
+      });
+
+      for (const item of group.items) {
+        const row = document.createElement('div');
+        row.className = 'confirmation-status-row';
+        row.innerHTML = `
+          <span>${item.participants ? item.participants.name : 'Unbekannt'}</span>
+          <span class="${item.confirmed ? 'badge-confirmed' : 'badge-pending'}">${item.confirmed ? 'Gelesen' : 'Offen'}</span>
+        `;
+        list.appendChild(row);
+      }
+
+      section.appendChild(header);
+      section.appendChild(list);
+      container.appendChild(section);
+    }
+
+    document.getElementById('confirmations-overview').style.display = 'block';
   },
 
   async loadParticipants() {

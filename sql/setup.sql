@@ -5,6 +5,7 @@
 -- Kann mehrfach ausgefuehrt werden (loescht alte Tabellen)
 
 -- Alte Tabellen entfernen (CASCADE loescht auch Policies automatisch)
+DROP TABLE IF EXISTS read_confirmations CASCADE;
 DROP TABLE IF EXISTS attachments CASCADE;
 DROP TABLE IF EXISTS entries CASCADE;
 DROP TABLE IF EXISTS attendance CASCADE;
@@ -32,9 +33,8 @@ CREATE TABLE protocols (
   year INT NOT NULL,
   week_start DATE NOT NULL,
   week_end DATE NOT NULL,
-  status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'archived')),
-  created_at TIMESTAMPTZ DEFAULT now(),
-  archived_at TIMESTAMPTZ
+  status TEXT NOT NULL DEFAULT 'active',
+  created_at TIMESTAMPTZ DEFAULT now()
 );
 
 -- 3. Anwesenheit
@@ -69,6 +69,18 @@ CREATE TABLE attachments (
   uploaded_at TIMESTAMPTZ DEFAULT now()
 );
 
+-- 6. Lesebestaetigungen
+CREATE TABLE read_confirmations (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  calendar_week INT NOT NULL,
+  year INT NOT NULL,
+  participant_id UUID NOT NULL REFERENCES participants(id) ON DELETE CASCADE,
+  confirmed BOOLEAN NOT NULL DEFAULT false,
+  confirmed_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ DEFAULT now(),
+  UNIQUE(calendar_week, year, participant_id)
+);
+
 -- ===========================================
 -- Row Level Security (RLS) - offen fuer anon (kein Login noetig)
 -- ===========================================
@@ -77,6 +89,7 @@ ALTER TABLE protocols ENABLE ROW LEVEL SECURITY;
 ALTER TABLE attendance ENABLE ROW LEVEL SECURITY;
 ALTER TABLE entries ENABLE ROW LEVEL SECURITY;
 ALTER TABLE attachments ENABLE ROW LEVEL SECURITY;
+ALTER TABLE read_confirmations ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "anon read participants" ON participants FOR SELECT TO anon USING (true);
 CREATE POLICY "anon insert participants" ON participants FOR INSERT TO anon WITH CHECK (true);
@@ -86,6 +99,7 @@ CREATE POLICY "anon delete participants" ON participants FOR DELETE TO anon USIN
 CREATE POLICY "anon read protocols" ON protocols FOR SELECT TO anon USING (true);
 CREATE POLICY "anon insert protocols" ON protocols FOR INSERT TO anon WITH CHECK (true);
 CREATE POLICY "anon update protocols" ON protocols FOR UPDATE TO anon USING (true);
+CREATE POLICY "anon delete protocols" ON protocols FOR DELETE TO anon USING (true);
 
 CREATE POLICY "anon read attendance" ON attendance FOR SELECT TO anon USING (true);
 CREATE POLICY "anon insert attendance" ON attendance FOR INSERT TO anon WITH CHECK (true);
@@ -99,6 +113,10 @@ CREATE POLICY "anon delete entries" ON entries FOR DELETE TO anon USING (true);
 CREATE POLICY "anon read attachments" ON attachments FOR SELECT TO anon USING (true);
 CREATE POLICY "anon insert attachments" ON attachments FOR INSERT TO anon WITH CHECK (true);
 CREATE POLICY "anon delete attachments" ON attachments FOR DELETE TO anon USING (true);
+
+CREATE POLICY "anon read confirmations" ON read_confirmations FOR SELECT TO anon USING (true);
+CREATE POLICY "anon insert confirmations" ON read_confirmations FOR INSERT TO anon WITH CHECK (true);
+CREATE POLICY "anon update confirmations" ON read_confirmations FOR UPDATE TO anon USING (true);
 
 -- ===========================================
 -- HINWEIS: Storage Bucket manuell im Dashboard erstellen!
@@ -182,17 +200,5 @@ BEGIN
     (v_protocol_id, 'sonstiges', '', 99);
 
   RETURN v_protocol_id;
-END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
-
--- ===========================================
--- Funktion: Protokoll archivieren
--- ===========================================
-CREATE OR REPLACE FUNCTION archive_protocol(p_protocol_id UUID)
-RETURNS VOID AS $$
-BEGIN
-  UPDATE protocols
-    SET status = 'archived', archived_at = now()
-    WHERE id = p_protocol_id AND status = 'active';
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;

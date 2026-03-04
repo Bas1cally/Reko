@@ -35,6 +35,7 @@ const App = {
       await this.loadOrCreateProtocol();
       await this.loadParticipants();
       await this.render();
+      await this.renderConfirmations();
     } catch (err) {
       console.error('Init error:', err);
       document.getElementById('loading').innerHTML =
@@ -410,9 +411,209 @@ const App = {
     this.showSave('saved');
   },
 
-  async archiveProtocol() {
-    await this.supabase.rpc('archive_protocol', { p_protocol_id: this.protocol.id });
+  // ===========================================
+  // Woche abschliessen: PDF generieren + Daten loeschen
+  // ===========================================
+  async closeWeek() {
+    // Daten fuer PDF sammeln
+    const attendance = await this.supabase
+      .from('attendance')
+      .select('*, participants(name, category)')
+      .eq('protocol_id', this.protocol.id);
+
+    const entries = await this.supabase
+      .from('entries')
+      .select('*')
+      .eq('protocol_id', this.protocol.id)
+      .order('sort_order');
+
+    // PDF generieren und herunterladen
+    this.generatePDF(this.protocol, attendance.data || [], entries.data || []);
+
+    // Lesebestaetigung fuer alle aktiven Teilnehmer anlegen
+    const confirmInserts = this.participants.map(p => ({
+      calendar_week: this.protocol.calendar_week,
+      year: this.protocol.year,
+      participant_id: p.id,
+      confirmed: false,
+    }));
+    if (confirmInserts.length > 0) {
+      await this.supabase.from('read_confirmations').insert(confirmInserts);
+    }
+
+    // Protokoll-Daten komplett loeschen (CASCADE loescht entries, attendance, attachments)
+    await this.supabase
+      .from('protocols')
+      .delete()
+      .eq('id', this.protocol.id);
+
+    // Seite neu laden -> neues leeres Protokoll wird erstellt
     window.location.reload();
+  },
+
+  // ===========================================
+  // PDF Generierung
+  // ===========================================
+  generatePDF(proto, attendance, entries) {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({ unit: 'mm', format: 'a4' });
+    const pageW = doc.internal.pageSize.getWidth();
+    const pageH = doc.internal.pageSize.getHeight();
+    const margin = 20;
+    const maxW = pageW - 2 * margin;
+    let y = margin;
+
+    const checkPage = (needed) => {
+      if (y + needed > pageH - margin) {
+        doc.addPage();
+        y = margin;
+        addWatermark();
+      }
+    };
+
+    const addWatermark = () => {
+      doc.saveGraphicsState();
+      doc.setFontSize(50);
+      doc.setTextColor(220, 220, 220);
+      doc.text('VERTRAULICH', pageW / 2, pageH / 2, { align: 'center', angle: 45 });
+      doc.restoreGraphicsState();
+    };
+
+    const addText = (text, size, style, color) => {
+      doc.setFontSize(size || 11);
+      doc.setFont('helvetica', style || 'normal');
+      doc.setTextColor(...(color || [0, 0, 0]));
+    };
+
+    const writeWrapped = (text, size, style, color) => {
+      addText(text, size, style, color);
+      const lines = doc.splitTextToSize(text, maxW);
+      const lineH = (size || 11) * 0.5;
+      checkPage(lines.length * lineH);
+      doc.text(lines, margin, y);
+      y += lines.length * lineH + 2;
+    };
+
+    // --- PDF Inhalt ---
+    addWatermark();
+
+    // Header
+    addText('', 18, 'bold');
+    doc.text(`ReKo Protokoll - KW ${proto.calendar_week} / ${proto.year}`, margin, y);
+    y += 8;
+
+    addText('', 10, 'normal', [100, 100, 100]);
+    doc.text(`${this.formatDate(proto.week_start)} - ${this.formatDate(proto.week_end)}`, margin, y);
+    y += 8;
+
+    // Trennlinie
+    doc.setDrawColor(200, 200, 200);
+    doc.line(margin, y, pageW - margin, y);
+    y += 6;
+
+    // Anwesenheit
+    const present = attendance.filter(a => a.present).map(a => a.participants.name);
+    const absent = attendance.filter(a => !a.present).map(a => a.participants.name);
+
+    writeWrapped('Anwesend: ' + (present.join(', ') || 'Niemand'), 10, 'normal');
+    writeWrapped('Abwesend: ' + (absent.join(', ') || '-'), 10, 'normal', [120, 120, 120]);
+    y += 4;
+
+    // Bericht Betriebsrat
+    const brEntry = entries.find(e => e.section === 'betriebsrat' && e.content && e.content.trim());
+    if (brEntry) {
+      checkPage(12);
+      writeWrapped('BERICHT BETRIEBSRAT', 11, 'bold', [100, 100, 100]);
+      writeWrapped(brEntry.content, 10, 'normal');
+      y += 4;
+    }
+
+    // Blitzlicht
+    const blitzEntries = entries.filter(e => e.section === 'blitzlicht' && e.content && e.content.trim());
+    if (blitzEntries.length > 0) {
+      checkPage(12);
+      writeWrapped('BERICHTE / BLITZLICHT', 11, 'bold', [100, 100, 100]);
+      for (const entry of blitzEntries) {
+        checkPage(12);
+        writeWrapped(entry.author_name || 'Unbekannt', 10, 'bold');
+        writeWrapped(entry.content, 10, 'normal');
+        y += 2;
+      }
+      y += 2;
+    }
+
+    // Sonstiges
+    const sonstigesEntry = entries.find(e => e.section === 'sonstiges' && e.content && e.content.trim());
+    if (sonstigesEntry) {
+      checkPage(12);
+      writeWrapped('SONSTIGES', 11, 'bold', [100, 100, 100]);
+      writeWrapped(sonstigesEntry.content, 10, 'normal');
+    }
+
+    // Footer auf jeder Seite
+    const totalPages = doc.internal.getNumberOfPages();
+    for (let i = 1; i <= totalPages; i++) {
+      doc.setPage(i);
+      doc.setFontSize(8);
+      doc.setTextColor(180, 180, 180);
+      doc.text('VERTRAULICH - Nur fuer internen Gebrauch', pageW / 2, pageH - 10, { align: 'center' });
+      doc.text(`Seite ${i} / ${totalPages}`, pageW - margin, pageH - 10, { align: 'right' });
+    }
+
+    doc.save(`ReKo_KW${proto.calendar_week}_${proto.year}.pdf`);
+  },
+
+  // ===========================================
+  // Lesebestaetigung
+  // ===========================================
+  async renderConfirmations() {
+    const container = document.getElementById('confirmations-section');
+    if (!container) return;
+
+    // Offene Bestaetigungen fuer aktuellen User laden
+    const { data: pending } = await this.supabase
+      .from('read_confirmations')
+      .select('*')
+      .eq('participant_id', this.currentUser.id)
+      .eq('confirmed', false)
+      .order('year', { ascending: false })
+      .order('calendar_week', { ascending: false });
+
+    if (!pending || pending.length === 0) {
+      container.style.display = 'none';
+      return;
+    }
+
+    container.style.display = 'block';
+    const list = document.getElementById('confirmations-list');
+    list.innerHTML = '';
+
+    for (const item of pending) {
+      const row = document.createElement('div');
+      row.className = 'confirmation-row';
+      row.innerHTML = `
+        <span>Protokoll KW ${item.calendar_week} / ${item.year} gelesen?</span>
+        <button class="btn btn-primary btn-sm" onclick="App.confirmRead('${item.id}', this)">Gelesen</button>
+      `;
+      list.appendChild(row);
+    }
+  },
+
+  async confirmRead(confirmationId, btn) {
+    await this.supabase
+      .from('read_confirmations')
+      .update({ confirmed: true, confirmed_at: new Date().toISOString() })
+      .eq('id', confirmationId);
+
+    btn.parentElement.remove();
+
+    // Wenn keine mehr offen, Section ausblenden
+    const list = document.getElementById('confirmations-list');
+    if (list && list.children.length === 0) {
+      document.getElementById('confirmations-section').style.display = 'none';
+    }
+
+    this.showSave('saved');
   },
 
   showSave(state) {
