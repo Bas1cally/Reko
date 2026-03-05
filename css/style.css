@@ -315,9 +315,34 @@ body {
   font-weight: 600;
   font-size: 15px;
 }
+.entry-card-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
 .entry-card-header .status {
   font-size: 12px;
   color: var(--mb-gray-500);
+}
+.btn-delete-entry {
+  background: none;
+  border: 1px solid var(--mb-gray-300);
+  color: var(--mb-gray-500);
+  font-size: 18px;
+  line-height: 1;
+  width: 26px;
+  height: 26px;
+  border-radius: var(--radius);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s;
+}
+.btn-delete-entry:hover {
+  background: var(--mb-red);
+  border-color: var(--mb-red);
+  color: var(--mb-white);
 }
 .entry-card-body {
   padding: 0 16px 16px;

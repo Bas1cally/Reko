@@ -388,9 +388,25 @@ const App = {
     header.className = 'entry-card-header';
     header.innerHTML = `
       <span class="name">Bericht von ${entry.author_name || 'Unbekannt'}</span>
-      <span class="status">${entry.content ? 'Eingetragen' : 'Offen'}</span>
+      <div class="entry-card-actions">
+        <span class="status">${entry.content ? 'Eingetragen' : 'Offen'}</span>
+        <button class="btn-delete-entry" title="Bericht löschen">&times;</button>
+      </div>
     `;
-    header.addEventListener('click', () => card.classList.toggle('open'));
+    header.querySelector('.name').addEventListener('click', () => card.classList.toggle('open'));
+    header.querySelector('.entry-card-actions .status').addEventListener('click', () => card.classList.toggle('open'));
+    header.querySelector('.btn-delete-entry').addEventListener('click', async (e) => {
+      e.stopPropagation();
+      if (!confirm(`Bericht von "${entry.author_name || 'Unbekannt'}" wirklich löschen?`)) return;
+      // Anhaenge aus Storage loeschen
+      const { data: atts } = await this.supabase.from('attachments').select('storage_path').eq('entry_id', entry.id);
+      if (atts && atts.length > 0) {
+        await this.supabase.storage.from('attachments').remove(atts.map(a => a.storage_path));
+      }
+      await this.supabase.from('entries').delete().eq('id', entry.id);
+      card.remove();
+      this.showSave('saved');
+    });
 
     const body = document.createElement('div');
     body.className = 'entry-card-body';
