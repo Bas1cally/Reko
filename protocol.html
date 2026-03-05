@@ -4,19 +4,22 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>ReKo Protokoll</title>
-  <link rel="stylesheet" href="css/style.css?v=7">
+  <link rel="stylesheet" href="css/style.css?v=8">
 </head>
 <body>
   <!-- Header -->
   <div class="header">
     <h1>ReKo Protokoll</h1>
-    <span id="kw-badge" class="kw-badge">KW --</span>
     <div class="header-actions">
       <span id="current-user" style="color:var(--mb-gray-300);font-size:13px;margin-right:4px"></span>
       <button onclick="window.location.href='admin.html'">Verwaltung</button>
-      <button id="btn-close-week" onclick="confirmCloseWeek()">Woche abschliessen</button>
       <button onclick="Auth.logout()">Wechseln</button>
     </div>
+  </div>
+
+  <!-- KW Tabs -->
+  <div class="kw-tabs-bar">
+    <div id="kw-tabs" class="kw-tabs"></div>
   </div>
 
   <!-- Loading -->
@@ -36,6 +39,7 @@
     <!-- Wocheninfo -->
     <div class="week-info">
       <span id="week-dates"></span>
+      <button id="btn-close-week" class="btn btn-primary btn-sm" onclick="confirmCloseWeek()">Woche abschliessen</button>
     </div>
 
     <!-- Anwesenheit -->
@@ -54,31 +58,35 @@
   <!-- Close Week Confirmation Modal -->
   <div id="close-week-modal" class="modal-overlay">
     <div class="modal">
-      <h2>Woche abschliessen?</h2>
-      <p>Das Protokoll wird als PDF heruntergeladen und anschliessend eine neue Woche gestartet. Bitte die PDF im lokalen Teams-Ordner speichern.</p>
+      <h2 id="close-week-title">Woche abschliessen?</h2>
+      <p id="close-week-desc">Das Protokoll wird als PDF heruntergeladen und anschliessend die Woche abgeschlossen. Bitte die PDF im lokalen Teams-Ordner speichern.</p>
       <div class="modal-actions">
         <button class="btn btn-secondary" onclick="closeModal()">Abbrechen</button>
-        <button class="btn btn-primary" onclick="doCloseWeek()">PDF erstellen &amp; abschliessen</button>
+        <button class="btn btn-primary" id="close-week-confirm-btn" onclick="doCloseWeek()">PDF erstellen &amp; abschliessen</button>
       </div>
     </div>
   </div>
 
   <script src="https://unpkg.com/jspdf@2.5.2/dist/jspdf.umd.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="js/config.js?v=7"></script>
-  <script src="js/auth.js?v=7"></script>
-  <script src="js/app.js?v=7"></script>
+  <script src="js/config.js?v=8"></script>
+  <script src="js/auth.js?v=8"></script>
+  <script src="js/app.js?v=8"></script>
   <script>
     App.init();
 
     function confirmCloseWeek() {
+      const kw = App.protocol ? App.protocol.calendar_week : '?';
+      document.getElementById('close-week-title').textContent = `KW ${kw} abschliessen?`;
+      document.getElementById('close-week-desc').textContent =
+        `Das Protokoll fuer KW ${kw} wird als PDF heruntergeladen und anschliessend abgeschlossen. Bitte die PDF im lokalen Teams-Ordner speichern.`;
       document.getElementById('close-week-modal').classList.add('open');
     }
     function closeModal() {
       document.getElementById('close-week-modal').classList.remove('open');
     }
     async function doCloseWeek() {
-      const btn = document.querySelector('#close-week-modal .btn-primary');
+      const btn = document.getElementById('close-week-confirm-btn');
       btn.textContent = 'PDF wird erstellt...';
       btn.disabled = true;
       try {

@@ -126,6 +126,58 @@ body {
   background: var(--mb-gray-100);
 }
 
+/* === KW TABS === */
+.kw-tabs-bar {
+  background: var(--mb-white);
+  border-bottom: 2px solid var(--mb-gray-200);
+  padding: 0 24px;
+  position: sticky;
+  top: 52px;
+  z-index: 99;
+}
+.kw-tabs {
+  display: flex;
+  gap: 0;
+  max-width: 1100px;
+  margin: 0 auto;
+  overflow-x: auto;
+}
+.kw-tab {
+  padding: 12px 20px;
+  border: none;
+  background: transparent;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--mb-gray-500);
+  cursor: pointer;
+  border-bottom: 3px solid transparent;
+  transition: all 0.15s;
+  white-space: nowrap;
+  font-family: inherit;
+}
+.kw-tab:hover {
+  color: var(--mb-black);
+  background: var(--mb-gray-100);
+}
+.kw-tab.active {
+  color: var(--mb-black);
+  border-bottom-color: var(--mb-accent);
+}
+.kw-tab.kw-tab-closed {
+  color: var(--mb-gray-300);
+  text-decoration: line-through;
+}
+.kw-tab-current {
+  font-size: 10px;
+  font-weight: 700;
+  background: var(--mb-accent);
+  color: var(--mb-white);
+  padding: 1px 6px;
+  border-radius: 8px;
+  margin-left: 4px;
+  vertical-align: middle;
+}
+
 /* === MAIN CONTENT === */
 .main {
   max-width: 1100px;
