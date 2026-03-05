@@ -95,9 +95,20 @@ const App = {
     return d.getUTCFullYear();
   },
 
+  getMonthName() {
+    const now = new Date();
+    return now.toLocaleDateString('de-DE', { month: 'long', year: 'numeric' });
+  },
+
   renderKwTabs() {
     const container = document.getElementById('kw-tabs');
     container.innerHTML = '';
+
+    // Monatsname als Label
+    const monthLabel = document.createElement('span');
+    monthLabel.className = 'kw-month-label';
+    monthLabel.textContent = this.getMonthName();
+    container.appendChild(monthLabel);
 
     for (const week of this.monthWeeks) {
       const tab = document.createElement('button');
@@ -106,7 +117,7 @@ const App = {
       tab.dataset.year = week.year;
 
       const isCurrent = week.kw === this.getISOWeek(new Date());
-      tab.innerHTML = `KW ${week.kw}${isCurrent ? ' <span class="kw-tab-current">aktuell</span>' : ''}`;
+      tab.innerHTML = `KW ${week.kw}${isCurrent ? ' <span class="kw-tab-current">aktuell</span>' : ''}<span class="kw-tab-dot"></span>`;
 
       tab.addEventListener('click', () => this.switchToKw(week.kw, week.year));
       container.appendChild(tab);
@@ -126,6 +137,27 @@ const App = {
         tab.classList.remove('kw-tab-closed');
       }
     });
+    // Inhalts-Indikatoren aktualisieren
+    this.updateKwTabDots();
+  },
+
+  async updateKwTabDots() {
+    const tabs = document.querySelectorAll('.kw-tab');
+    for (const tab of tabs) {
+      const kw = parseInt(tab.dataset.kw);
+      const proto = this.protocols[kw];
+      const dot = tab.querySelector('.kw-tab-dot');
+      if (!dot || !proto) continue;
+
+      const { data: entries } = await this.supabase
+        .from('entries')
+        .select('content')
+        .eq('protocol_id', proto.id)
+        .neq('content', '');
+
+      const hasContent = entries && entries.some(e => e.content && e.content.trim());
+      dot.classList.toggle('has-content', hasContent);
+    }
   },
 
   async switchToKw(kw, year) {
@@ -236,6 +268,20 @@ const App = {
     document.getElementById('week-dates').textContent =
       `KW ${this.protocol.calendar_week}: ${this.formatDate(this.protocol.week_start)} - ${this.formatDate(this.protocol.week_end)}`;
 
+    // Zukunfts-KW erkennen: KW liegt nach der aktuellen KW
+    const realKw = this.getISOWeek(new Date());
+    const realYear = this.getISOYear(new Date());
+    const isFutureWeek = this.protocol.year > realYear ||
+      (this.protocol.year === realYear && this.protocol.calendar_week > realKw);
+
+    // "Woche abschliessen" nur bei vergangenen/aktueller KW anzeigen
+    const closeBtn = document.getElementById('btn-close-week');
+    if (closeBtn) closeBtn.style.display = isFutureWeek ? 'none' : '';
+
+    // Anwesenheit bei zukuenftigen KWs ausblenden
+    const attendanceSection = document.querySelector('.attendance-section');
+    if (attendanceSection) attendanceSection.style.display = isFutureWeek ? 'none' : '';
+
     // Anwesenheit
     this.renderAttendance(attendance);
 
@@ -249,8 +295,13 @@ const App = {
       container.appendChild(this.createSection('Bericht des Bereichsbetriebsrates', [brEntry]));
     }
 
-    // 2. Blitzlicht - Berichte aller Anwesenden
+    // 2. Blitzlicht - Berichte aller Anwesenden (eigener Bericht zuerst)
     const blitzEntries = entries.filter(e => e.section === 'blitzlicht');
+    blitzEntries.sort((a, b) => {
+      const aIsMine = a.author_name === this.currentUser.name ? 0 : 1;
+      const bIsMine = b.author_name === this.currentUser.name ? 0 : 1;
+      return aIsMine - bIsMine;
+    });
     container.appendChild(await this.createBlitzlichtSection(blitzEntries));
 
     // 3. Sonstiges
