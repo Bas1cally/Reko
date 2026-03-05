@@ -28,9 +28,11 @@ const App = {
     this.currentUser = Auth.requireAuth();
     if (!this.currentUser) return;
 
+    this.isProtokolleur = this.currentUser.role === 'protokolleur';
+
     // Aktuellen User im Header anzeigen
     const userEl = document.getElementById('current-user');
-    if (userEl) userEl.textContent = this.currentUser.name;
+    if (userEl) userEl.textContent = this.isProtokolleur ? 'Protokolleur' : this.currentUser.name;
 
     document.getElementById('loading').style.display = 'block';
     document.getElementById('app-content').style.display = 'none';
@@ -41,7 +43,11 @@ const App = {
       await this.loadAllMonthProtocols();
       this.renderKwTabs();
       await this.switchToKw(this.currentKw);
-      await this.renderConfirmations();
+      // Lesebestaetigungen nur fuer Protokolleur relevant (Uebersicht)
+      // Fuer normale User: automatisch als gelesen markieren
+      if (!this.isProtokolleur) {
+        await this.markAsRead();
+      }
     } catch (err) {
       console.error('Init error:', err);
       document.getElementById('loading').innerHTML =
@@ -174,6 +180,11 @@ const App = {
     this.updateKwTabStates();
     await this.render();
 
+    // Normale User automatisch als "gelesen" markieren
+    if (!this.isProtokolleur && this.currentUser.id) {
+      await this.markAsRead();
+    }
+
     document.getElementById('loading').style.display = 'none';
     document.getElementById('app-content').style.display = 'block';
   },
@@ -264,6 +275,10 @@ const App = {
     let entries = await this.loadEntries();
     entries = await this.ensureSections(entries);
 
+    // Alte Lesebestaetigungen-Section ausblenden (ersetzt durch automatisches Gelesen)
+    const confSection = document.getElementById('confirmations-section');
+    if (confSection) confSection.style.display = 'none';
+
     // Header
     document.getElementById('week-dates').textContent =
       `KW ${this.protocol.calendar_week}: ${this.formatDate(this.protocol.week_start)} - ${this.formatDate(this.protocol.week_end)}`;
@@ -274,16 +289,16 @@ const App = {
     const isFutureWeek = this.protocol.year > realYear ||
       (this.protocol.year === realYear && this.protocol.calendar_week > realKw);
 
-    // "Woche abschliessen" nur bei vergangenen/aktueller KW anzeigen
+    // "Woche abschliessen" nur fuer Protokolleur bei vergangenen/aktueller KW anzeigen
     const closeBtn = document.getElementById('btn-close-week');
-    if (closeBtn) closeBtn.style.display = isFutureWeek ? 'none' : '';
+    if (closeBtn) closeBtn.style.display = (isFutureWeek || !this.isProtokolleur) ? 'none' : '';
 
     // Anwesenheit bei zukuenftigen KWs ausblenden
     const attendanceSection = document.querySelector('.attendance-section');
     if (attendanceSection) attendanceSection.style.display = isFutureWeek ? 'none' : '';
 
     // Anwesenheit
-    this.renderAttendance(attendance);
+    await this.renderAttendance(attendance);
 
     // Ablauf rendern
     const container = document.getElementById('entries-container');
@@ -315,9 +330,18 @@ const App = {
   },
 
   // --- Anwesenheit ---
-  renderAttendance(attendanceList) {
+  async renderAttendance(attendanceList) {
     const grid = document.getElementById('attendance-grid');
     grid.innerHTML = '';
+
+    // Gelesen-Status laden (read_confirmations fuer diese KW)
+    const { data: readConfs } = await this.supabase
+      .from('read_confirmations')
+      .select('participant_id, confirmed')
+      .eq('calendar_week', this.protocol.calendar_week)
+      .eq('year', this.protocol.year)
+      .eq('confirmed', true);
+    const readSet = new Set((readConfs || []).map(r => r.participant_id));
 
     // Nach Kategorie gruppieren
     const categories = [...new Set(this.participants.map(p => p.category))];
@@ -335,11 +359,31 @@ const App = {
 
       for (const p of catParticipants) {
         const att = attendanceList.find(a => a.participant_id === p.id);
-        const item = document.createElement('div');
+        const isPresent = att && att.present;
+        const hasRead = readSet.has(p.id);
         const isMe = this.currentUser && this.currentUser.id === p.id;
-        item.className = 'attendance-item' + (att && att.present ? ' present' : '') + (isMe ? ' is-me' : '');
-        item.innerHTML = `<span class="check">&#10003;</span><span>${p.name}</span>`;
-        item.addEventListener('click', () => this.toggleAttendance(p.id, item));
+
+        const item = document.createElement('div');
+        item.className = 'attendance-item'
+          + (isPresent ? ' present' : '')
+          + (hasRead && !isPresent ? ' has-read' : '')
+          + (isMe ? ' is-me' : '');
+
+        if (isPresent) {
+          item.innerHTML = `<span class="check">&#10003;</span><span>${p.name}</span>`;
+        } else if (hasRead) {
+          item.innerHTML = `<span class="read-icon">&#128065;</span><span>${p.name}</span><span class="gelesen-badge">Gelesen</span>`;
+        } else {
+          item.innerHTML = `<span class="check">&#10003;</span><span>${p.name}</span>`;
+        }
+
+        // Nur Protokolleur darf Anwesenheit togglen
+        if (this.isProtokolleur) {
+          item.style.cursor = 'pointer';
+          item.addEventListener('click', () => this.toggleAttendance(p.id, item));
+        } else {
+          item.style.cursor = 'default';
+        }
         items.appendChild(item);
       }
 
@@ -349,7 +393,12 @@ const App = {
   },
 
   async toggleAttendance(participantId, element) {
+    if (!this.isProtokolleur) return;
     const isPresent = element.classList.toggle('present');
+    element.classList.remove('has-read');
+    if (isPresent) {
+      element.innerHTML = `<span class="check">&#10003;</span><span>${element.querySelector('span:nth-child(2)').textContent}</span>`;
+    }
     await this.supabase
       .from('attendance')
       .update({ present: isPresent })
@@ -430,10 +479,30 @@ const App = {
     return section;
   },
 
+  // --- Akkordeon: eine Karte oeffnen, andere schliessen ---
+  toggleAccordion(card) {
+    const section = card.closest('.category-section');
+    if (!section) { card.classList.toggle('open'); return; }
+    const wasOpen = card.classList.contains('open');
+    // Alle Karten in dieser Sektion schliessen
+    section.querySelectorAll('.entry-card.open').forEach(c => c.classList.remove('open'));
+    // Geklickte Karte oeffnen (wenn sie vorher zu war)
+    if (!wasOpen) {
+      card.classList.add('open');
+      // Textarea resize nachdem Karte sichtbar ist
+      const ta = card.querySelector('textarea');
+      if (ta) requestAnimationFrame(() => this.autoResize(ta));
+    }
+  },
+
   // --- Entry Card ---
   async createEntryCard(entry) {
     const card = document.createElement('div');
     card.className = 'entry-card' + (entry.content ? ' has-content' : '');
+
+    // Berechtigung: nur Autor oder Protokolleur darf bearbeiten/loeschen
+    const isOwner = entry.author_name === this.currentUser.name;
+    const canEdit = isOwner || this.isProtokolleur;
 
     const header = document.createElement('div');
     header.className = 'entry-card-header';
@@ -441,23 +510,28 @@ const App = {
       <span class="name">Bericht von ${entry.author_name || 'Unbekannt'}</span>
       <div class="entry-card-actions">
         <span class="status">${entry.content ? 'Eingetragen' : 'Offen'}</span>
-        <button class="btn-delete-entry" title="Bericht löschen">&times;</button>
+        ${canEdit ? '<button class="btn-delete-entry" title="Bericht löschen">&times;</button>' : ''}
       </div>
     `;
-    header.querySelector('.name').addEventListener('click', () => card.classList.toggle('open'));
-    header.querySelector('.entry-card-actions .status').addEventListener('click', () => card.classList.toggle('open'));
-    header.querySelector('.btn-delete-entry').addEventListener('click', async (e) => {
-      e.stopPropagation();
-      if (!confirm(`Bericht von "${entry.author_name || 'Unbekannt'}" wirklich löschen?`)) return;
-      // Anhaenge aus Storage loeschen
-      const { data: atts } = await this.supabase.from('attachments').select('storage_path').eq('entry_id', entry.id);
-      if (atts && atts.length > 0) {
-        await this.supabase.storage.from('attachments').remove(atts.map(a => a.storage_path));
-      }
-      await this.supabase.from('entries').delete().eq('id', entry.id);
-      card.remove();
-      this.showSave('saved');
-    });
+    header.querySelector('.name').addEventListener('click', () => this.toggleAccordion(card));
+    header.querySelector('.entry-card-actions .status').addEventListener('click', () => this.toggleAccordion(card));
+    if (canEdit) {
+      header.querySelector('.btn-delete-entry').addEventListener('click', async (e) => {
+        e.stopPropagation();
+        if (!confirm(`Bericht von "${entry.author_name || 'Unbekannt'}" wirklich löschen?`)) return;
+        // Anhaenge aus Storage loeschen (Hyperlinks ueberspringen)
+        const { data: atts } = await this.supabase.from('attachments').select('storage_path').eq('entry_id', entry.id);
+        if (atts && atts.length > 0) {
+          const storagePaths = atts.filter(a => a.storage_path !== 'hyperlink').map(a => a.storage_path);
+          if (storagePaths.length > 0) {
+            await this.supabase.storage.from('attachments').remove(storagePaths);
+          }
+        }
+        await this.supabase.from('entries').delete().eq('id', entry.id);
+        card.remove();
+        this.showSave('saved');
+      });
+    }
 
     const body = document.createElement('div');
     body.className = 'entry-card-body';
@@ -465,10 +539,16 @@ const App = {
     const textarea = document.createElement('textarea');
     textarea.value = entry.content || '';
     textarea.placeholder = `Bericht von ${entry.author_name || ''} ...`;
-    textarea.addEventListener('input', () => {
-      this.autoResize(textarea);
-      this.debounceSaveEntry(entry.id, textarea.value, card, header);
-    });
+    if (canEdit) {
+      textarea.addEventListener('input', () => {
+        this.autoResize(textarea);
+        this.debounceSaveEntry(entry.id, textarea.value, card, header);
+      });
+    } else {
+      textarea.readOnly = true;
+      textarea.style.opacity = '0.8';
+      textarea.style.cursor = 'default';
+    }
     // Initial resize nach Render
     requestAnimationFrame(() => this.autoResize(textarea));
 
@@ -481,20 +561,34 @@ const App = {
     const fileList = document.createElement('div');
     fileList.className = 'file-list';
 
-    const uploadBtn = document.createElement('label');
-    uploadBtn.className = 'file-upload-btn';
-    uploadBtn.innerHTML = '+ Datei anhängen';
-    const fileInput = document.createElement('input');
-    fileInput.type = 'file';
-    fileInput.style.display = 'none';
-    fileInput.addEventListener('change', (e) => {
-      if (e.target.files[0]) {
-        this.uploadFile(entry.id, e.target.files[0], fileList);
-      }
-    });
-    uploadBtn.appendChild(fileInput);
+    if (canEdit) {
+      const uploadBtns = document.createElement('div');
+      uploadBtns.className = 'upload-buttons';
 
-    uploadArea.appendChild(uploadBtn);
+      const uploadBtn = document.createElement('label');
+      uploadBtn.className = 'file-upload-btn';
+      uploadBtn.innerHTML = '+ Datei anhängen';
+      const fileInput = document.createElement('input');
+      fileInput.type = 'file';
+      fileInput.style.display = 'none';
+      fileInput.addEventListener('change', (e) => {
+        if (e.target.files[0]) {
+          this.uploadFile(entry.id, e.target.files[0], fileList);
+        }
+      });
+      uploadBtn.appendChild(fileInput);
+
+      // Hyperlink-Button
+      const linkBtn = document.createElement('button');
+      linkBtn.className = 'file-upload-btn link-upload-btn';
+      linkBtn.type = 'button';
+      linkBtn.innerHTML = '+ Link einfügen';
+      linkBtn.addEventListener('click', () => this.showLinkDialog(entry.id, fileList, linkBtn));
+
+      uploadBtns.appendChild(uploadBtn);
+      uploadBtns.appendChild(linkBtn);
+      uploadArea.appendChild(uploadBtns);
+    }
     uploadArea.appendChild(fileList);
     body.appendChild(uploadArea);
 
@@ -587,6 +681,12 @@ const App = {
   },
 
   addFileItem(container, attachment) {
+    // Hyperlinks separat behandeln
+    if (attachment.storage_path === 'hyperlink') {
+      this.addLinkItem(container, attachment);
+      return;
+    }
+
     const IMAGE_EXTS = ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp'];
     const ext = attachment.original_name.split('.').pop().toLowerCase();
     const isImage = IMAGE_EXTS.includes(ext);
@@ -596,7 +696,6 @@ const App = {
 
     let thumbHtml = '';
     if (isImage) {
-      // Thumbnail via Supabase public URL
       const { data: urlData } = this.supabase.storage.from('attachments').getPublicUrl(attachment.storage_path);
       if (urlData && urlData.publicUrl) {
         thumbHtml = `<img src="${urlData.publicUrl}" class="file-thumb" alt="">`;
@@ -613,6 +712,102 @@ const App = {
       <button class="remove-file" onclick="App.removeFile('${attachment.id}', '${attachment.storage_path}', this)">&times;</button>
     `;
     container.appendChild(item);
+  },
+
+  // --- Hyperlink einfuegen ---
+  showLinkDialog(entryId, fileListEl, triggerBtn) {
+    // Altes Dialog entfernen falls vorhanden
+    const existing = triggerBtn.parentElement.querySelector('.link-dialog');
+    if (existing) { existing.remove(); return; }
+
+    const dialog = document.createElement('div');
+    dialog.className = 'link-dialog';
+    dialog.innerHTML = `
+      <input type="url" class="link-input" placeholder="https://..." autofocus>
+      <input type="text" class="link-input" placeholder="Anzeigename (optional)">
+      <div class="link-dialog-actions">
+        <button class="btn btn-primary btn-sm link-save-btn">Speichern</button>
+        <button class="btn btn-secondary btn-sm link-cancel-btn">Abbrechen</button>
+      </div>
+    `;
+    triggerBtn.parentElement.appendChild(dialog);
+
+    const urlInput = dialog.querySelector('input[type="url"]');
+    const nameInput = dialog.querySelector('input[type="text"]');
+    urlInput.focus();
+
+    dialog.querySelector('.link-save-btn').addEventListener('click', () => {
+      const url = urlInput.value.trim();
+      if (!url) { urlInput.focus(); return; }
+      const displayName = nameInput.value.trim() || url;
+      this.saveHyperlink(entryId, url, displayName, fileListEl);
+      dialog.remove();
+    });
+    dialog.querySelector('.link-cancel-btn').addEventListener('click', () => dialog.remove());
+    urlInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') { e.preventDefault(); nameInput.focus(); }
+    });
+    nameInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') { e.preventDefault(); dialog.querySelector('.link-save-btn').click(); }
+    });
+  },
+
+  async saveHyperlink(entryId, url, displayName, fileListEl) {
+    this.showSave('saving');
+    const { data: att, error } = await this.supabase
+      .from('attachments')
+      .insert({
+        entry_id: entryId,
+        filename: url,
+        original_name: displayName,
+        storage_path: 'hyperlink',
+      })
+      .select()
+      .single();
+
+    if (!error && att) {
+      this.addLinkItem(fileListEl, att);
+      this.showSave('saved');
+    }
+  },
+
+  addLinkItem(container, attachment) {
+    const item = document.createElement('div');
+    item.className = 'file-item file-item-link';
+    item.innerHTML = `
+      <div class="file-item-content">
+        <span class="link-icon">&#128279;</span>
+        <a href="${attachment.filename}" target="_blank" rel="noopener noreferrer">
+          ${attachment.original_name}
+        </a>
+      </div>
+      <button class="remove-file" onclick="App.removeLink('${attachment.id}', this)">&times;</button>
+    `;
+    container.appendChild(item);
+  },
+
+  async removeLink(attachmentId, btn) {
+    await this.supabase.from('attachments').delete().eq('id', attachmentId);
+    btn.parentElement.remove();
+    this.showSave('saved');
+  },
+
+  // --- Automatisch als gelesen markieren (fuer normale User) ---
+  async markAsRead() {
+    if (!this.protocol || !this.currentUser.id) return;
+    try {
+      await this.supabase
+        .from('read_confirmations')
+        .upsert({
+          calendar_week: this.protocol.calendar_week,
+          year: this.protocol.year,
+          participant_id: this.currentUser.id,
+          confirmed: true,
+          confirmed_at: new Date().toISOString(),
+        }, { onConflict: 'calendar_week,year,participant_id' });
+    } catch (e) {
+      console.warn('Gelesen-Markierung fehlgeschlagen:', e);
+    }
   },
 
   async downloadFile(storagePath, originalName) {
@@ -823,6 +1018,14 @@ const App = {
             doc.addImage(dataUrl, ext === 'png' ? 'PNG' : 'JPEG', margin, y, imgW, imgH);
             y += imgH + 4;
           }
+        } else if (att.storage_path === 'hyperlink') {
+          // Hyperlink: klickbar im PDF
+          checkPage(6);
+          doc.setFontSize(9);
+          doc.setTextColor(0, 90, 180);
+          doc.textWithLink(att.original_name, margin + 2, y, { url: att.filename });
+          y += 5;
+          doc.setTextColor(0, 0, 0);
         } else {
           // Nicht-Bild: als Texthinweis
           checkPage(8);
@@ -905,58 +1108,8 @@ const App = {
     doc.save(`ReKo_KW${proto.calendar_week}_${proto.year}.pdf`);
   },
 
-  // ===========================================
-  // Lesebestaetigung
-  // ===========================================
-  async renderConfirmations() {
-    const container = document.getElementById('confirmations-section');
-    if (!container) return;
-
-    // Offene Bestaetigungen fuer aktuellen User laden
-    const { data: pending } = await this.supabase
-      .from('read_confirmations')
-      .select('*')
-      .eq('participant_id', this.currentUser.id)
-      .eq('confirmed', false)
-      .order('year', { ascending: false })
-      .order('calendar_week', { ascending: false });
-
-    if (!pending || pending.length === 0) {
-      container.style.display = 'none';
-      return;
-    }
-
-    container.style.display = 'block';
-    const list = document.getElementById('confirmations-list');
-    list.innerHTML = '';
-
-    for (const item of pending) {
-      const row = document.createElement('div');
-      row.className = 'confirmation-row';
-      row.innerHTML = `
-        <span>Protokoll KW ${item.calendar_week} / ${item.year} gelesen?</span>
-        <button class="btn btn-primary btn-sm" onclick="App.confirmRead('${item.id}', this)">Gelesen</button>
-      `;
-      list.appendChild(row);
-    }
-  },
-
-  async confirmRead(confirmationId, btn) {
-    await this.supabase
-      .from('read_confirmations')
-      .update({ confirmed: true, confirmed_at: new Date().toISOString() })
-      .eq('id', confirmationId);
-
-    btn.parentElement.remove();
-
-    // Wenn keine mehr offen, Section ausblenden
-    const list = document.getElementById('confirmations-list');
-    if (list && list.children.length === 0) {
-      document.getElementById('confirmations-section').style.display = 'none';
-    }
-
-    this.showSave('saved');
-  },
+  // Lesebestaetigungen werden jetzt automatisch beim Oeffnen des Protokolls gesetzt
+  // Die alte manuelle Bestaetigungs-Section wird nicht mehr angezeigt
 
   showSave(state) {
     const el = document.getElementById('save-indicator');

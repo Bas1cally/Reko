@@ -385,9 +385,10 @@ body {
   font-family: inherit;
   font-size: 14px;
   resize: none;
-  overflow: hidden;
+  overflow-y: auto;
   transition: border-color 0.2s;
   line-height: 1.5;
+  field-sizing: content;
 }
 .entry-card textarea:focus {
   outline: none;
@@ -459,6 +460,84 @@ body {
   cursor: pointer;
   font-size: 16px;
   padding: 0 4px;
+}
+
+/* === GELESEN STATUS === */
+.attendance-item.has-read {
+  border-color: var(--mb-accent);
+  background: #f0f8ff;
+}
+.attendance-item .read-icon {
+  font-size: 16px;
+  width: 20px;
+  text-align: center;
+}
+.gelesen-badge {
+  font-size: 10px;
+  font-weight: 700;
+  background: var(--mb-accent);
+  color: var(--mb-white);
+  padding: 1px 6px;
+  border-radius: 8px;
+  margin-left: 4px;
+}
+
+/* === LINK DIALOG === */
+.upload-buttons {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.link-upload-btn {
+  border-style: dashed !important;
+}
+.link-dialog {
+  margin-top: 8px;
+  padding: 12px;
+  background: var(--mb-gray-100);
+  border-radius: var(--radius);
+  border: 1px solid var(--mb-gray-200);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.link-input {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid var(--mb-gray-300);
+  border-radius: var(--radius);
+  font-size: 13px;
+  font-family: inherit;
+}
+.link-input:focus {
+  outline: none;
+  border-color: var(--mb-black);
+}
+.link-dialog-actions {
+  display: flex;
+  gap: 6px;
+}
+.file-item-link .link-icon {
+  font-size: 14px;
+}
+.file-item-link a {
+  color: var(--mb-accent);
+  text-decoration: none;
+  word-break: break-all;
+}
+.file-item-link a:hover {
+  text-decoration: underline;
+}
+
+/* === PROTOKOLLEUR LOGIN === */
+.login-protokolleur-btn {
+  background: var(--mb-black) !important;
+  color: var(--mb-white) !important;
+  border-color: var(--mb-black) !important;
+  font-weight: 700 !important;
+}
+.login-protokolleur-btn:hover {
+  background: var(--mb-gray-700) !important;
 }
 
 /* === SAVE INDICATOR === */

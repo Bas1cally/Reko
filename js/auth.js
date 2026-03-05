@@ -17,6 +17,7 @@ const Auth = {
     localStorage.setItem(this.storageKey, JSON.stringify({
       id: participant.id,
       name: participant.name,
+      role: participant.role || 'member',
     }));
   },
 
