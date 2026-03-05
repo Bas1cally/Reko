@@ -14,6 +14,10 @@ const CATEGORY_LABELS = {
 const App = {
   supabase: null,
   protocol: null,
+  protocols: {},  // KW -> protocol mapping
+  monthWeeks: [], // alle KWs des Monats
+  currentKw: null,
+  currentYear: null,
   participants: [],
   saveTimers: {},
   currentUser: null,
@@ -32,9 +36,11 @@ const App = {
     document.getElementById('app-content').style.display = 'none';
 
     try {
-      await this.loadOrCreateProtocol();
+      this.calculateMonthWeeks();
       await this.loadParticipants();
-      await this.render();
+      await this.loadAllMonthProtocols();
+      this.renderKwTabs();
+      await this.switchToKw(this.currentKw);
       await this.renderConfirmations();
     } catch (err) {
       console.error('Init error:', err);
@@ -43,8 +49,149 @@ const App = {
     }
   },
 
-  async loadOrCreateProtocol() {
-    const { data, error } = await this.supabase.rpc('create_weekly_protocol');
+  // Alle KWs berechnen die im aktuellen Monat liegen
+  calculateMonthWeeks() {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = now.getMonth(); // 0-based
+
+    // Aktuelle KW ermitteln (ISO)
+    this.currentYear = year;
+    this.currentKw = this.getISOWeek(now);
+
+    // Alle Montage im aktuellen Monat finden
+    const weeks = [];
+    const seen = new Set();
+
+    // Vom 1. des Monats bis zum letzten Tag
+    const firstDay = new Date(year, month, 1);
+    const lastDay = new Date(year, month + 1, 0);
+
+    for (let d = new Date(firstDay); d <= lastDay; d.setDate(d.getDate() + 1)) {
+      const kw = this.getISOWeek(d);
+      const kwYear = this.getISOYear(d);
+      const key = `${kwYear}-${kw}`;
+      if (!seen.has(key)) {
+        seen.add(key);
+        weeks.push({ kw, year: kwYear });
+      }
+    }
+
+    this.monthWeeks = weeks;
+  },
+
+  getISOWeek(date) {
+    const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+    const dayNum = d.getUTCDay() || 7;
+    d.setUTCDate(d.getUTCDate() + 4 - dayNum);
+    const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+    return Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
+  },
+
+  getISOYear(date) {
+    const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+    const dayNum = d.getUTCDay() || 7;
+    d.setUTCDate(d.getUTCDate() + 4 - dayNum);
+    return d.getUTCFullYear();
+  },
+
+  getMonthName() {
+    const now = new Date();
+    return now.toLocaleDateString('de-DE', { month: 'long', year: 'numeric' });
+  },
+
+  renderKwTabs() {
+    const container = document.getElementById('kw-tabs');
+    container.innerHTML = '';
+
+    // Monatsname als Label
+    const monthLabel = document.createElement('span');
+    monthLabel.className = 'kw-month-label';
+    monthLabel.textContent = this.getMonthName();
+    container.appendChild(monthLabel);
+
+    for (const week of this.monthWeeks) {
+      const tab = document.createElement('button');
+      tab.className = 'kw-tab' + (week.kw === this.currentKw ? ' active' : '');
+      tab.dataset.kw = week.kw;
+      tab.dataset.year = week.year;
+
+      const isCurrent = week.kw === this.getISOWeek(new Date());
+      tab.innerHTML = `KW ${week.kw}${isCurrent ? ' <span class="kw-tab-current">aktuell</span>' : ''}<span class="kw-tab-dot"></span>`;
+
+      tab.addEventListener('click', () => this.switchToKw(week.kw, week.year));
+      container.appendChild(tab);
+    }
+  },
+
+  updateKwTabStates() {
+    const tabs = document.querySelectorAll('.kw-tab');
+    tabs.forEach(tab => {
+      const kw = parseInt(tab.dataset.kw);
+      tab.classList.toggle('active', kw === this.currentKw);
+      // Abgeschlossene KWs markieren
+      const proto = this.protocols[kw];
+      if (!proto) {
+        tab.classList.add('kw-tab-closed');
+      } else {
+        tab.classList.remove('kw-tab-closed');
+      }
+    });
+    // Inhalts-Indikatoren aktualisieren
+    this.updateKwTabDots();
+  },
+
+  async updateKwTabDots() {
+    const tabs = document.querySelectorAll('.kw-tab');
+    for (const tab of tabs) {
+      const kw = parseInt(tab.dataset.kw);
+      const proto = this.protocols[kw];
+      const dot = tab.querySelector('.kw-tab-dot');
+      if (!dot || !proto) continue;
+
+      const { data: entries } = await this.supabase
+        .from('entries')
+        .select('content')
+        .eq('protocol_id', proto.id)
+        .neq('content', '');
+
+      const hasContent = entries && entries.some(e => e.content && e.content.trim());
+      dot.classList.toggle('has-content', hasContent);
+    }
+  },
+
+  async switchToKw(kw, year) {
+    this.currentKw = kw;
+    if (year) this.currentYear = year;
+
+    document.getElementById('loading').style.display = 'block';
+    document.getElementById('app-content').style.display = 'none';
+
+    // Protokoll fuer diese KW laden/erstellen
+    await this.loadOrCreateProtocolForKw(kw, this.currentYear);
+    this.protocol = this.protocols[kw];
+
+    this.updateKwTabStates();
+    await this.render();
+
+    document.getElementById('loading').style.display = 'none';
+    document.getElementById('app-content').style.display = 'block';
+  },
+
+  async loadAllMonthProtocols() {
+    for (const week of this.monthWeeks) {
+      await this.loadOrCreateProtocolForKw(week.kw, week.year);
+    }
+  },
+
+  async loadOrCreateProtocolForKw(kw, year) {
+    // Erst schauen ob schon geladen
+    if (this.protocols[kw]) return;
+
+    const { data, error } = await this.supabase.rpc('create_protocol_for_week', {
+      p_cw: kw,
+      p_year: year,
+    });
     if (error) throw error;
 
     const { data: proto } = await this.supabase
@@ -53,14 +200,13 @@ const App = {
       .eq('id', data)
       .single();
 
-    this.protocol = proto;
+    this.protocols[kw] = proto;
   },
 
   async loadParticipants() {
     const { data } = await this.supabase
       .from('participants')
       .select('*')
-      .eq('active', true)
       .order('sort_order');
     this.participants = data || [];
   },
@@ -119,9 +265,22 @@ const App = {
     entries = await this.ensureSections(entries);
 
     // Header
-    document.getElementById('kw-badge').textContent = `KW ${this.protocol.calendar_week}`;
     document.getElementById('week-dates').textContent =
-      `${this.formatDate(this.protocol.week_start)} - ${this.formatDate(this.protocol.week_end)}`;
+      `KW ${this.protocol.calendar_week}: ${this.formatDate(this.protocol.week_start)} - ${this.formatDate(this.protocol.week_end)}`;
+
+    // Zukunfts-KW erkennen: KW liegt nach der aktuellen KW
+    const realKw = this.getISOWeek(new Date());
+    const realYear = this.getISOYear(new Date());
+    const isFutureWeek = this.protocol.year > realYear ||
+      (this.protocol.year === realYear && this.protocol.calendar_week > realKw);
+
+    // "Woche abschliessen" nur bei vergangenen/aktueller KW anzeigen
+    const closeBtn = document.getElementById('btn-close-week');
+    if (closeBtn) closeBtn.style.display = isFutureWeek ? 'none' : '';
+
+    // Anwesenheit bei zukuenftigen KWs ausblenden
+    const attendanceSection = document.querySelector('.attendance-section');
+    if (attendanceSection) attendanceSection.style.display = isFutureWeek ? 'none' : '';
 
     // Anwesenheit
     this.renderAttendance(attendance);
@@ -136,8 +295,13 @@ const App = {
       container.appendChild(this.createSection('Bericht des Bereichsbetriebsrates', [brEntry]));
     }
 
-    // 2. Blitzlicht - Berichte aller Anwesenden
+    // 2. Blitzlicht - Berichte aller Anwesenden (eigener Bericht zuerst)
     const blitzEntries = entries.filter(e => e.section === 'blitzlicht');
+    blitzEntries.sort((a, b) => {
+      const aIsMine = a.author_name === this.currentUser.name ? 0 : 1;
+      const bIsMine = b.author_name === this.currentUser.name ? 0 : 1;
+      return aIsMine - bIsMine;
+    });
     container.appendChild(await this.createBlitzlichtSection(blitzEntries));
 
     // 3. Sonstiges
@@ -275,9 +439,25 @@ const App = {
     header.className = 'entry-card-header';
     header.innerHTML = `
       <span class="name">Bericht von ${entry.author_name || 'Unbekannt'}</span>
-      <span class="status">${entry.content ? 'Eingetragen' : 'Offen'}</span>
+      <div class="entry-card-actions">
+        <span class="status">${entry.content ? 'Eingetragen' : 'Offen'}</span>
+        <button class="btn-delete-entry" title="Bericht löschen">&times;</button>
+      </div>
     `;
-    header.addEventListener('click', () => card.classList.toggle('open'));
+    header.querySelector('.name').addEventListener('click', () => card.classList.toggle('open'));
+    header.querySelector('.entry-card-actions .status').addEventListener('click', () => card.classList.toggle('open'));
+    header.querySelector('.btn-delete-entry').addEventListener('click', async (e) => {
+      e.stopPropagation();
+      if (!confirm(`Bericht von "${entry.author_name || 'Unbekannt'}" wirklich löschen?`)) return;
+      // Anhaenge aus Storage loeschen
+      const { data: atts } = await this.supabase.from('attachments').select('storage_path').eq('entry_id', entry.id);
+      if (atts && atts.length > 0) {
+        await this.supabase.storage.from('attachments').remove(atts.map(a => a.storage_path));
+      }
+      await this.supabase.from('entries').delete().eq('id', entry.id);
+      card.remove();
+      this.showSave('saved');
+    });
 
     const body = document.createElement('div');
     body.className = 'entry-card-body';
@@ -525,9 +705,24 @@ const App = {
         .eq('id', this.protocol.id);
     }
 
-    // Kurz warten damit der PDF-Download starten kann, dann neu laden
+    // Protokoll aus Cache entfernen
+    const closedKw = this.protocol.calendar_week;
+    delete this.protocols[closedKw];
+
+    // Kurz warten damit der PDF-Download starten kann
     await new Promise(r => setTimeout(r, 1500));
-    window.location.reload();
+
+    // Tab als abgeschlossen markieren, zur aktuellen echten KW wechseln
+    this.updateKwTabStates();
+    const realKw = this.getISOWeek(new Date());
+    const realYear = this.getISOYear(new Date());
+    // Wenn die geschlossene KW die aktuelle war, zur naechsten offenen wechseln
+    const nextKw = this.monthWeeks.find(w => this.protocols[w.kw] || w.kw !== closedKw);
+    if (nextKw) {
+      await this.switchToKw(realKw, realYear);
+    } else {
+      window.location.reload();
+    }
   },
 
   // ===========================================

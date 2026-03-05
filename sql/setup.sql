@@ -117,6 +117,7 @@ CREATE POLICY "anon delete attachments" ON attachments FOR DELETE TO anon USING 
 CREATE POLICY "anon read confirmations" ON read_confirmations FOR SELECT TO anon USING (true);
 CREATE POLICY "anon insert confirmations" ON read_confirmations FOR INSERT TO anon WITH CHECK (true);
 CREATE POLICY "anon update confirmations" ON read_confirmations FOR UPDATE TO anon USING (true);
+CREATE POLICY "anon delete confirmations" ON read_confirmations FOR DELETE TO anon USING (true);
 
 -- ===========================================
 -- HINWEIS: Storage Bucket manuell im Dashboard erstellen!
@@ -185,6 +186,50 @@ BEGIN
 
   INSERT INTO protocols (calendar_week, year, week_start, week_end)
     VALUES (v_cw, v_year, v_week_start, v_week_end)
+    RETURNING id INTO v_protocol_id;
+
+  -- Anwesenheit fuer alle aktiven Teilnehmer
+  FOR v_participant IN SELECT id FROM participants WHERE active = true
+  LOOP
+    INSERT INTO attendance (protocol_id, participant_id, present)
+      VALUES (v_protocol_id, v_participant.id, false);
+  END LOOP;
+
+  -- Feste Sektionen anlegen (leer)
+  INSERT INTO entries (protocol_id, section, content, sort_order) VALUES
+    (v_protocol_id, 'betriebsrat', '', 1),
+    (v_protocol_id, 'sonstiges', '', 99);
+
+  RETURN v_protocol_id;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- ===========================================
+-- Funktion: Protokoll fuer eine bestimmte KW erstellen
+-- ===========================================
+DROP FUNCTION IF EXISTS create_protocol_for_week(INT, INT);
+
+CREATE OR REPLACE FUNCTION create_protocol_for_week(p_cw INT, p_year INT)
+RETURNS UUID AS $$
+DECLARE
+  v_week_start DATE;
+  v_week_end DATE;
+  v_protocol_id UUID;
+  v_participant RECORD;
+BEGIN
+  -- Pruefe ob Protokoll fuer diese KW schon existiert
+  SELECT id INTO v_protocol_id FROM protocols
+    WHERE calendar_week = p_cw AND year = p_year AND status = 'active';
+  IF v_protocol_id IS NOT NULL THEN
+    RETURN v_protocol_id;
+  END IF;
+
+  -- Montag der gewuenschten KW berechnen (ISO Week)
+  v_week_start := date_trunc('week', make_date(p_year, 1, 4) + ((p_cw - 1) * 7) * INTERVAL '1 day')::DATE;
+  v_week_end := v_week_start + INTERVAL '4 days';
+
+  INSERT INTO protocols (calendar_week, year, week_start, week_end)
+    VALUES (p_cw, p_year, v_week_start, v_week_end)
     RETURNING id INTO v_protocol_id;
 
   -- Anwesenheit fuer alle aktiven Teilnehmer
