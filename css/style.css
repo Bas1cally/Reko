@@ -385,9 +385,10 @@ body {
   font-family: inherit;
   font-size: 14px;
   resize: none;
-  overflow: hidden;
+  overflow-y: auto;
   transition: border-color 0.2s;
   line-height: 1.5;
+  field-sizing: content;
 }
 .entry-card textarea:focus {
   outline: none;

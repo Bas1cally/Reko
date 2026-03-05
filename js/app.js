@@ -487,7 +487,12 @@ const App = {
     // Alle Karten in dieser Sektion schliessen
     section.querySelectorAll('.entry-card.open').forEach(c => c.classList.remove('open'));
     // Geklickte Karte oeffnen (wenn sie vorher zu war)
-    if (!wasOpen) card.classList.add('open');
+    if (!wasOpen) {
+      card.classList.add('open');
+      // Textarea resize nachdem Karte sichtbar ist
+      const ta = card.querySelector('textarea');
+      if (ta) requestAnimationFrame(() => this.autoResize(ta));
+    }
   },
 
   // --- Entry Card ---
@@ -495,32 +500,38 @@ const App = {
     const card = document.createElement('div');
     card.className = 'entry-card' + (entry.content ? ' has-content' : '');
 
+    // Berechtigung: nur Autor oder Protokolleur darf bearbeiten/loeschen
+    const isOwner = entry.author_name === this.currentUser.name;
+    const canEdit = isOwner || this.isProtokolleur;
+
     const header = document.createElement('div');
     header.className = 'entry-card-header';
     header.innerHTML = `
       <span class="name">Bericht von ${entry.author_name || 'Unbekannt'}</span>
       <div class="entry-card-actions">
         <span class="status">${entry.content ? 'Eingetragen' : 'Offen'}</span>
-        <button class="btn-delete-entry" title="Bericht löschen">&times;</button>
+        ${canEdit ? '<button class="btn-delete-entry" title="Bericht löschen">&times;</button>' : ''}
       </div>
     `;
     header.querySelector('.name').addEventListener('click', () => this.toggleAccordion(card));
     header.querySelector('.entry-card-actions .status').addEventListener('click', () => this.toggleAccordion(card));
-    header.querySelector('.btn-delete-entry').addEventListener('click', async (e) => {
-      e.stopPropagation();
-      if (!confirm(`Bericht von "${entry.author_name || 'Unbekannt'}" wirklich löschen?`)) return;
-      // Anhaenge aus Storage loeschen (Hyperlinks ueberspringen)
-      const { data: atts } = await this.supabase.from('attachments').select('storage_path').eq('entry_id', entry.id);
-      if (atts && atts.length > 0) {
-        const storagePaths = atts.filter(a => a.storage_path !== 'hyperlink').map(a => a.storage_path);
-        if (storagePaths.length > 0) {
-          await this.supabase.storage.from('attachments').remove(storagePaths);
+    if (canEdit) {
+      header.querySelector('.btn-delete-entry').addEventListener('click', async (e) => {
+        e.stopPropagation();
+        if (!confirm(`Bericht von "${entry.author_name || 'Unbekannt'}" wirklich löschen?`)) return;
+        // Anhaenge aus Storage loeschen (Hyperlinks ueberspringen)
+        const { data: atts } = await this.supabase.from('attachments').select('storage_path').eq('entry_id', entry.id);
+        if (atts && atts.length > 0) {
+          const storagePaths = atts.filter(a => a.storage_path !== 'hyperlink').map(a => a.storage_path);
+          if (storagePaths.length > 0) {
+            await this.supabase.storage.from('attachments').remove(storagePaths);
+          }
         }
-      }
-      await this.supabase.from('entries').delete().eq('id', entry.id);
-      card.remove();
-      this.showSave('saved');
-    });
+        await this.supabase.from('entries').delete().eq('id', entry.id);
+        card.remove();
+        this.showSave('saved');
+      });
+    }
 
     const body = document.createElement('div');
     body.className = 'entry-card-body';
@@ -528,10 +539,16 @@ const App = {
     const textarea = document.createElement('textarea');
     textarea.value = entry.content || '';
     textarea.placeholder = `Bericht von ${entry.author_name || ''} ...`;
-    textarea.addEventListener('input', () => {
-      this.autoResize(textarea);
-      this.debounceSaveEntry(entry.id, textarea.value, card, header);
-    });
+    if (canEdit) {
+      textarea.addEventListener('input', () => {
+        this.autoResize(textarea);
+        this.debounceSaveEntry(entry.id, textarea.value, card, header);
+      });
+    } else {
+      textarea.readOnly = true;
+      textarea.style.opacity = '0.8';
+      textarea.style.cursor = 'default';
+    }
     // Initial resize nach Render
     requestAnimationFrame(() => this.autoResize(textarea));
 
@@ -544,32 +561,34 @@ const App = {
     const fileList = document.createElement('div');
     fileList.className = 'file-list';
 
-    const uploadBtns = document.createElement('div');
-    uploadBtns.className = 'upload-buttons';
+    if (canEdit) {
+      const uploadBtns = document.createElement('div');
+      uploadBtns.className = 'upload-buttons';
 
-    const uploadBtn = document.createElement('label');
-    uploadBtn.className = 'file-upload-btn';
-    uploadBtn.innerHTML = '+ Datei anhängen';
-    const fileInput = document.createElement('input');
-    fileInput.type = 'file';
-    fileInput.style.display = 'none';
-    fileInput.addEventListener('change', (e) => {
-      if (e.target.files[0]) {
-        this.uploadFile(entry.id, e.target.files[0], fileList);
-      }
-    });
-    uploadBtn.appendChild(fileInput);
+      const uploadBtn = document.createElement('label');
+      uploadBtn.className = 'file-upload-btn';
+      uploadBtn.innerHTML = '+ Datei anhängen';
+      const fileInput = document.createElement('input');
+      fileInput.type = 'file';
+      fileInput.style.display = 'none';
+      fileInput.addEventListener('change', (e) => {
+        if (e.target.files[0]) {
+          this.uploadFile(entry.id, e.target.files[0], fileList);
+        }
+      });
+      uploadBtn.appendChild(fileInput);
 
-    // Hyperlink-Button
-    const linkBtn = document.createElement('button');
-    linkBtn.className = 'file-upload-btn link-upload-btn';
-    linkBtn.type = 'button';
-    linkBtn.innerHTML = '+ Link einfügen';
-    linkBtn.addEventListener('click', () => this.showLinkDialog(entry.id, fileList, linkBtn));
+      // Hyperlink-Button
+      const linkBtn = document.createElement('button');
+      linkBtn.className = 'file-upload-btn link-upload-btn';
+      linkBtn.type = 'button';
+      linkBtn.innerHTML = '+ Link einfügen';
+      linkBtn.addEventListener('click', () => this.showLinkDialog(entry.id, fileList, linkBtn));
 
-    uploadBtns.appendChild(uploadBtn);
-    uploadBtns.appendChild(linkBtn);
-    uploadArea.appendChild(uploadBtns);
+      uploadBtns.appendChild(uploadBtn);
+      uploadBtns.appendChild(linkBtn);
+      uploadArea.appendChild(uploadBtns);
+    }
     uploadArea.appendChild(fileList);
     body.appendChild(uploadArea);
 
