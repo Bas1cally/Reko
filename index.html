@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>ReKo Protokoll - Anmeldung</title>
-  <link rel="stylesheet" href="css/style.css?v=5">
+  <link rel="stylesheet" href="css/style.css?v=9">
 </head>
 <body>
   <div class="login-container">
@@ -19,8 +19,8 @@
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="js/config.js?v=5"></script>
-  <script src="js/auth.js?v=5"></script>
+  <script src="js/config.js?v=9"></script>
+  <script src="js/auth.js?v=9"></script>
   <script>
     // Immer zuerst abmelden, damit die Auswahl gezeigt wird
     Auth.logout_silent();
@@ -43,6 +43,23 @@
 
       const grid = document.getElementById('participant-grid');
       const categories = [...new Set(participants.map(p => p.category))];
+
+      // Protokolleur-Button zuerst
+      const protokolleurGroup = document.createElement('div');
+      protokolleurGroup.className = 'login-group';
+      protokolleurGroup.innerHTML = `<div class="login-group-label">Protokollführung</div>`;
+      const protokolleurItems = document.createElement('div');
+      protokolleurItems.className = 'login-group-items';
+      const protokolleurBtn = document.createElement('button');
+      protokolleurBtn.className = 'login-participant-btn login-protokolleur-btn';
+      protokolleurBtn.textContent = 'Protokolleur';
+      protokolleurBtn.addEventListener('click', () => {
+        Auth.setUser({ id: null, name: 'Protokolleur', role: 'protokolleur' });
+        window.location.href = 'protocol.html';
+      });
+      protokolleurItems.appendChild(protokolleurBtn);
+      protokolleurGroup.appendChild(protokolleurItems);
+      grid.appendChild(protokolleurGroup);
 
       for (const cat of categories) {
         const catParts = participants.filter(p => p.category === cat);
