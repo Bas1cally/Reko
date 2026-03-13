@@ -304,10 +304,10 @@ const App = {
     const container = document.getElementById('entries-container');
     container.innerHTML = '';
 
-    // 1. Bericht Betriebsrat
+    // 1. Betriebsrat / Gäste / Praktikanten
     const brEntry = entries.find(e => e.section === 'betriebsrat');
     if (brEntry) {
-      container.appendChild(this.createSection('Bericht des Bereichsbetriebsrates', [brEntry]));
+      container.appendChild(this.createBetriebsratSection(brEntry));
     }
 
     // 2. Blitzlicht - Berichte aller Anwesenden (eigener Bericht zuerst)
@@ -372,7 +372,7 @@ const App = {
         if (isPresent) {
           item.innerHTML = `<span class="check">&#10003;</span><span>${p.name}</span>`;
         } else if (hasRead) {
-          item.innerHTML = `<span class="read-icon">&#128065;</span><span>${p.name}</span><span class="gelesen-badge">Gelesen</span>`;
+          item.innerHTML = `<span class="read-icon">&#128065;</span><span>${p.name}</span><span class="gelesen-badge">Geöffnet</span>`;
         } else {
           item.innerHTML = `<span class="check">&#10003;</span><span>${p.name}</span>`;
         }
@@ -438,6 +438,68 @@ const App = {
     return section;
   },
 
+  // --- Betriebsrat / Gäste / Praktikanten (mit Namensfeld) ---
+  createBetriebsratSection(entry) {
+    const section = document.createElement('div');
+    section.className = 'category-section';
+    section.innerHTML = `<div class="category-header">Betriebsrat / Gäste / Praktikanten</div>`;
+
+    const card = document.createElement('div');
+    card.className = 'entry-card' + (entry.content ? ' has-content open' : ' open');
+
+    const body = document.createElement('div');
+    body.className = 'entry-card-body';
+    body.style.display = 'block';
+
+    // Namensfeld
+    const nameRow = document.createElement('div');
+    nameRow.className = 'br-name-row';
+    const nameLabel = document.createElement('label');
+    nameLabel.textContent = 'Name:';
+    nameLabel.className = 'br-name-label';
+    const nameInput = document.createElement('input');
+    nameInput.type = 'text';
+    nameInput.className = 'br-name-input';
+    nameInput.placeholder = 'z.B. Herr Müller, Frau Schmidt ...';
+    nameInput.value = entry.author_name || '';
+    nameInput.addEventListener('input', () => {
+      this.debounceSaveEntryField(entry.id, { author_name: nameInput.value });
+    });
+    nameRow.appendChild(nameLabel);
+    nameRow.appendChild(nameInput);
+    body.appendChild(nameRow);
+
+    // Textfeld
+    const textarea = document.createElement('textarea');
+    textarea.value = entry.content || '';
+    textarea.placeholder = 'Bericht Betriebsrat / Gäste / Praktikanten ...';
+    textarea.addEventListener('input', () => {
+      this.autoResize(textarea);
+      this.debounceSaveEntry(entry.id, textarea.value, card);
+    });
+    requestAnimationFrame(() => this.autoResize(textarea));
+
+    body.appendChild(textarea);
+    card.appendChild(body);
+    section.appendChild(card);
+
+    return section;
+  },
+
+  // Einzelnes Feld speichern (fuer Namensfeld)
+  debounceSaveEntryField(entryId, fields) {
+    const key = `field_${entryId}`;
+    clearTimeout(this.saveTimers[key]);
+    this.saveTimers[key] = setTimeout(async () => {
+      this.showSave('saving');
+      const { error } = await this.supabase
+        .from('entries')
+        .update({ ...fields, updated_at: new Date().toISOString() })
+        .eq('id', entryId);
+      if (!error) this.showSave('saved');
+    }, 600);
+  },
+
   // --- Blitzlicht (Berichte aller) ---
   async createBlitzlichtSection(existingEntries) {
     const section = document.createElement('div');
@@ -453,13 +515,13 @@ const App = {
     const addBtn = document.createElement('button');
     addBtn.className = 'btn btn-primary';
     addBtn.style.marginTop = '12px';
-    addBtn.textContent = '+ Eigenen Bericht hinzufügen';
+    addBtn.textContent = this.isProtokolleur ? '+ Bericht hinzufügen' : '+ Eigenen Bericht hinzufügen';
     addBtn.addEventListener('click', async () => {
       const { data: newEntry, error } = await this.supabase
         .from('entries')
         .insert({
           protocol_id: this.protocol.id,
-          author_name: this.currentUser.name,
+          author_name: this.isProtokolleur ? '' : this.currentUser.name,
           section: 'blitzlicht',
           content: '',
           sort_order: 10 + existingEntries.length,
@@ -506,14 +568,37 @@ const App = {
 
     const header = document.createElement('div');
     header.className = 'entry-card-header';
-    header.innerHTML = `
-      <span class="name">Bericht von ${entry.author_name || 'Unbekannt'}</span>
-      <div class="entry-card-actions">
-        <span class="status">${entry.content ? 'Eingetragen' : 'Offen'}</span>
-        ${canEdit ? '<button class="btn-delete-entry" title="Bericht löschen">&times;</button>' : ''}
-      </div>
-    `;
-    header.querySelector('.name').addEventListener('click', () => this.toggleAccordion(card));
+
+    // Protokolleur bekommt editierbares Namensfeld
+    if (this.isProtokolleur) {
+      header.innerHTML = `
+        <div class="name blitz-name-row">
+          <span>Bericht von</span>
+          <input type="text" class="blitz-name-input" placeholder="Name eingeben ..." value="${entry.author_name || ''}">
+        </div>
+        <div class="entry-card-actions">
+          <span class="status">${entry.content ? 'Eingetragen' : 'Offen'}</span>
+          <button class="btn-delete-entry" title="Bericht löschen">&times;</button>
+        </div>
+      `;
+      const nameInput = header.querySelector('.blitz-name-input');
+      nameInput.addEventListener('click', (e) => e.stopPropagation());
+      nameInput.addEventListener('input', () => {
+        this.debounceSaveEntryField(entry.id, { author_name: nameInput.value });
+      });
+      header.querySelector('.blitz-name-row').addEventListener('click', (e) => {
+        if (e.target !== nameInput) this.toggleAccordion(card);
+      });
+    } else {
+      header.innerHTML = `
+        <span class="name">Bericht von ${entry.author_name || 'Unbekannt'}</span>
+        <div class="entry-card-actions">
+          <span class="status">${entry.content ? 'Eingetragen' : 'Offen'}</span>
+          ${canEdit ? '<button class="btn-delete-entry" title="Bericht löschen">&times;</button>' : ''}
+        </div>
+      `;
+      header.querySelector('.name').addEventListener('click', () => this.toggleAccordion(card));
+    }
     header.querySelector('.entry-card-actions .status').addEventListener('click', () => this.toggleAccordion(card));
     if (canEdit) {
       header.querySelector('.btn-delete-entry').addEventListener('click', async (e) => {
@@ -1061,11 +1146,14 @@ const App = {
     writeWrapped('Abwesend: ' + (absent.join(', ') || '-'), 10, 'normal', [120, 120, 120]);
     y += 4;
 
-    // Bericht Betriebsrat
+    // Betriebsrat / Gäste / Praktikanten
     const brEntry = entries.find(e => e.section === 'betriebsrat' && e.content && e.content.trim());
     if (brEntry) {
       checkPage(12);
-      writeWrapped('BERICHT BETRIEBSRAT', 11, 'bold', [100, 100, 100]);
+      const brTitle = brEntry.author_name
+        ? `BETRIEBSRAT / GÄSTE / PRAKTIKANTEN (${brEntry.author_name})`
+        : 'BETRIEBSRAT / GÄSTE / PRAKTIKANTEN';
+      writeWrapped(brTitle, 11, 'bold', [100, 100, 100]);
       writeWrapped(brEntry.content, 10, 'normal');
       await addAttachments(brEntry.id);
       y += 4;
