@@ -395,6 +395,53 @@ body {
   border-color: var(--mb-black);
 }
 
+/* === BETRIEBSRAT NAME ROW === */
+.br-name-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+.br-name-label {
+  font-size: 14px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.br-name-input {
+  flex: 1;
+  padding: 8px 12px;
+  border: 1px solid var(--mb-gray-200);
+  border-radius: var(--radius);
+  font-family: inherit;
+  font-size: 14px;
+  transition: border-color 0.2s;
+}
+.br-name-input:focus {
+  outline: none;
+  border-color: var(--mb-black);
+}
+
+/* === BLITZLICHT NAME INPUT (Protokolleur) === */
+.blitz-name-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.blitz-name-input {
+  padding: 4px 8px;
+  border: 1px solid var(--mb-gray-200);
+  border-radius: var(--radius);
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  width: 200px;
+  transition: border-color 0.2s;
+}
+.blitz-name-input:focus {
+  outline: none;
+  border-color: var(--mb-black);
+}
+
 /* === FILE UPLOAD === */
 .file-upload-area {
   margin-top: 10px;
