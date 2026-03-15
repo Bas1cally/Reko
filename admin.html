@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>ReKo - Verwaltung</title>
-  <link rel="stylesheet" href="css/style.css?v=6">
+  <link rel="stylesheet" href="css/style.css?v=7">
 </head>
 <body>
   <!-- Header -->
@@ -40,6 +40,20 @@
     </div>
 
     <div id="admin-content" style="display:none">
+      <!-- Monatsarchiv PDF Export -->
+      <div class="admin-add-section">
+        <h2>Monatsarchiv PDF</h2>
+        <p style="color:var(--mb-gray-500);font-size:13px;margin-bottom:14px">Alle Protokolle eines Monats als zusammengefasstes PDF exportieren.</p>
+        <div id="archive-months" class="archive-month-grid"></div>
+        <div id="archive-loading" class="loading" style="display:none;padding:20px">
+          <div class="spinner"></div>
+          <p>Lade Archivdaten...</p>
+        </div>
+        <div id="archive-empty" style="display:none;color:var(--mb-gray-500);font-size:13px;padding:8px 0">
+          Keine archivierten Protokolle vorhanden.
+        </div>
+      </div>
+
       <!-- Lesebestaetigungen Uebersicht -->
       <div id="confirmations-overview" class="admin-add-section" style="display:none">
         <h2>Lesebestaetigungen</h2>
@@ -69,10 +83,11 @@
     </div>
   </div>
 
+  <script src="https://unpkg.com/jspdf@2.5.2/dist/jspdf.umd.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="js/config.js?v=6"></script>
-  <script src="js/auth.js?v=6"></script>
-  <script src="js/admin.js?v=6"></script>
+  <script src="js/config.js?v=7"></script>
+  <script src="js/auth.js?v=7"></script>
+  <script src="js/admin.js?v=7"></script>
   <script>
     Admin.init();
   </script>

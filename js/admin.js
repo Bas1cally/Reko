@@ -39,6 +39,7 @@ const Admin = {
       document.getElementById('admin-main').style.display = 'block';
       this.loadParticipants();
       this.loadConfirmations();
+      this.loadArchiveMonths();
     } else {
       error.style.display = 'block';
       input.value = '';
@@ -222,5 +223,261 @@ const Admin = {
     nameInput.value = '';
     catSelect.value = '';
     await this.loadParticipants();
+  },
+
+  // ===========================================
+  // Monatsarchiv PDF
+  // ===========================================
+
+  MONTH_NAMES: ['Januar', 'Februar', 'Maerz', 'April', 'Mai', 'Juni',
+    'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember'],
+
+  ARCHIVE_SECTION_LABELS: {
+    doctors: 'Aerzte',
+    socialCounseling: 'Sozialberatung',
+    healthPromotion: 'Betriebliche Gesundheitsfoerderung',
+    wdOrganization: 'WD-Organisation',
+    emergency: 'Notfall-/Rettungssanitaeter',
+    worksCouncil: 'Betriebsratsmitglied',
+  },
+
+  async loadArchiveMonths() {
+    const loadingEl = document.getElementById('archive-loading');
+    const gridEl = document.getElementById('archive-months');
+    const emptyEl = document.getElementById('archive-empty');
+
+    loadingEl.style.display = 'block';
+    gridEl.innerHTML = '';
+
+    try {
+      const resp = await fetch('archive_data.json?v=' + Date.now());
+      if (!resp.ok) throw new Error('Archivdaten nicht gefunden');
+      const archiveData = await resp.json();
+      const entries = archiveData.archive || [];
+
+      if (entries.length === 0) {
+        emptyEl.style.display = 'block';
+        loadingEl.style.display = 'none';
+        return;
+      }
+
+      // Parse dates and group by month
+      const months = {};
+      for (const entry of entries) {
+        const parts = entry.date.split('.');
+        const day = parseInt(parts[0], 10);
+        const month = parseInt(parts[1], 10);
+        const year = parseInt(parts[2], 10);
+        const key = `${year}-${String(month).padStart(2, '0')}`;
+        if (!months[key]) months[key] = { year, month, entries: [] };
+        months[key].entries.push({ ...entry, _day: day, _month: month, _year: year });
+      }
+
+      // Sort months descending
+      const sortedKeys = Object.keys(months).sort().reverse();
+
+      for (const key of sortedKeys) {
+        const m = months[key];
+        m.entries.sort((a, b) => a._day - b._day);
+
+        const card = document.createElement('div');
+        card.className = 'archive-month-card';
+        card.innerHTML = `
+          <span class="month-name">${this.MONTH_NAMES[m.month - 1]} ${m.year}</span>
+          <span class="month-meta">${m.entries.length} Protokoll${m.entries.length !== 1 ? 'e' : ''}</span>
+        `;
+        card.addEventListener('click', () => this.generateMonthlyPDF(m, card));
+        gridEl.appendChild(card);
+      }
+
+      loadingEl.style.display = 'none';
+    } catch (err) {
+      console.error('Archiv laden fehlgeschlagen:', err);
+      loadingEl.style.display = 'none';
+      emptyEl.style.display = 'block';
+    }
+  },
+
+  async generateMonthlyPDF(monthData, cardEl) {
+    if (!window.jspdf) {
+      alert('PDF-Bibliothek nicht geladen. Bitte Seite neu laden.');
+      return;
+    }
+
+    cardEl.classList.add('generating');
+    const metaEl = cardEl.querySelector('.month-meta');
+    const origMeta = metaEl.textContent;
+    metaEl.textContent = 'PDF wird erstellt...';
+
+    try {
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF({ unit: 'mm', format: 'a4' });
+      const pageW = doc.internal.pageSize.getWidth();
+      const pageH = doc.internal.pageSize.getHeight();
+      const margin = 20;
+      const maxW = pageW - 2 * margin;
+      let y = margin;
+
+      const checkPage = (needed) => {
+        if (y + needed > pageH - margin) {
+          doc.addPage();
+          y = margin;
+          addWatermark();
+        }
+      };
+
+      const addWatermark = () => {
+        doc.saveGraphicsState();
+        doc.setFontSize(50);
+        doc.setTextColor(220, 220, 220);
+        doc.text('VERTRAULICH', pageW / 2, pageH / 2, { align: 'center', angle: 45 });
+        doc.restoreGraphicsState();
+      };
+
+      const addText = (size, style, color) => {
+        doc.setFontSize(size || 11);
+        doc.setFont('helvetica', style || 'normal');
+        doc.setTextColor(...(color || [0, 0, 0]));
+      };
+
+      const writeWrapped = (text, size, style, color) => {
+        addText(size, style, color);
+        const lines = doc.splitTextToSize(text, maxW);
+        const lineH = (size || 11) * 0.5;
+        checkPage(lines.length * lineH);
+        doc.text(lines, margin, y);
+        y += lines.length * lineH + 2;
+      };
+
+      // --- Deckblatt ---
+      addWatermark();
+      y = 60;
+      addText(28, 'bold');
+      doc.text('ReKo Monatsarchiv', pageW / 2, y, { align: 'center' });
+      y += 14;
+
+      addText(20, 'normal', [100, 100, 100]);
+      doc.text(`${this.MONTH_NAMES[monthData.month - 1]} ${monthData.year}`, pageW / 2, y, { align: 'center' });
+      y += 12;
+
+      addText(12, 'normal', [150, 150, 150]);
+      doc.text(`${monthData.entries.length} Protokoll${monthData.entries.length !== 1 ? 'e' : ''}`, pageW / 2, y, { align: 'center' });
+      y += 20;
+
+      // Inhaltsverzeichnis
+      doc.setDrawColor(200, 200, 200);
+      doc.line(margin + 20, y, pageW - margin - 20, y);
+      y += 10;
+
+      addText(14, 'bold');
+      doc.text('Inhalt', pageW / 2, y, { align: 'center' });
+      y += 10;
+
+      for (let i = 0; i < monthData.entries.length; i++) {
+        const entry = monthData.entries[i];
+        const kw = this.getISOWeekFromDate(entry._day, entry._month, entry._year);
+        addText(12, 'normal');
+        doc.text(`KW ${kw}  -  ${entry.date}`, pageW / 2, y, { align: 'center' });
+        y += 7;
+      }
+
+      // --- Pro Woche eine Sektion ---
+      for (let i = 0; i < monthData.entries.length; i++) {
+        const entry = monthData.entries[i];
+        const kw = this.getISOWeekFromDate(entry._day, entry._month, entry._year);
+
+        // Neue Seite fuer jede Woche
+        doc.addPage();
+        y = margin;
+        addWatermark();
+
+        // Wochen-Header
+        addText(18, 'bold');
+        doc.text(`ReKo Protokoll - KW ${kw} / ${entry._year}`, margin, y);
+        y += 8;
+
+        addText(10, 'normal', [100, 100, 100]);
+        doc.text(`Datum: ${entry.date}`, margin, y);
+        y += 8;
+
+        // Trennlinie
+        doc.setDrawColor(200, 200, 200);
+        doc.line(margin, y, pageW - margin, y);
+        y += 6;
+
+        // Anwesenheit aus allen Kategorien
+        const allPeople = [];
+        for (const [section, people] of Object.entries(entry.data || {})) {
+          for (const p of people) {
+            allPeople.push({ ...p, section });
+          }
+        }
+
+        const present = allPeople.filter(p => p.attended).map(p => p.name);
+        const absent = allPeople.filter(p => !p.attended).map(p => p.name);
+
+        writeWrapped('Anwesend: ' + (present.join(', ') || 'Niemand'), 10, 'normal');
+        writeWrapped('Abwesend: ' + (absent.join(', ') || '-'), 10, 'normal', [120, 120, 120]);
+        y += 4;
+
+        // Berichte
+        const reports = entry.reports || [];
+        if (reports.length > 0) {
+          checkPage(12);
+          writeWrapped('BERICHTE / BLITZLICHT', 11, 'bold', [100, 100, 100]);
+
+          for (const report of reports) {
+            checkPage(12);
+            writeWrapped(report.name || 'Unbekannt', 10, 'bold');
+            if (report.content) {
+              writeWrapped(report.content, 10, 'normal');
+            }
+            y += 2;
+          }
+          y += 2;
+        }
+
+        // Agenda
+        const agenda = entry.agenda || [];
+        if (agenda.length > 0) {
+          checkPage(12);
+          writeWrapped('TAGESORDNUNG', 11, 'bold', [100, 100, 100]);
+          for (const item of agenda) {
+            checkPage(6);
+            writeWrapped('- ' + item, 10, 'normal');
+          }
+          y += 2;
+        }
+      }
+
+      // Footer auf jeder Seite
+      const totalPages = doc.internal.getNumberOfPages();
+      for (let i = 1; i <= totalPages; i++) {
+        doc.setPage(i);
+        doc.setFontSize(8);
+        doc.setTextColor(180, 180, 180);
+        doc.text('VERTRAULICH - Nur fuer internen Gebrauch', pageW / 2, pageH - 10, { align: 'center' });
+        doc.text(`Seite ${i} / ${totalPages}`, pageW - margin, pageH - 10, { align: 'right' });
+      }
+
+      const monthStr = String(monthData.month).padStart(2, '0');
+      doc.save(`ReKo_Monatsarchiv_${monthData.year}-${monthStr}.pdf`);
+
+      metaEl.textContent = origMeta;
+      cardEl.classList.remove('generating');
+    } catch (err) {
+      console.error('PDF Fehler:', err);
+      alert('Fehler beim Erstellen des PDFs: ' + err.message);
+      metaEl.textContent = origMeta;
+      cardEl.classList.remove('generating');
+    }
+  },
+
+  getISOWeekFromDate(day, month, year) {
+    const d = new Date(Date.UTC(year, month - 1, day));
+    const dayNum = d.getUTCDay() || 7;
+    d.setUTCDate(d.getUTCDate() + 4 - dayNum);
+    const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+    return Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
   },
 };
