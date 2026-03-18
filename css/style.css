@@ -826,6 +826,43 @@ body {
   font-weight: 600;
 }
 
+/* === ARCHIVE MONTH GRID === */
+.archive-month-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.archive-month-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 16px 24px;
+  border: 2px solid var(--mb-gray-200);
+  border-radius: var(--radius);
+  background: var(--mb-white);
+  cursor: pointer;
+  transition: all 0.15s;
+  min-width: 140px;
+}
+.archive-month-card:hover {
+  border-color: var(--mb-black);
+  background: var(--mb-gray-100);
+}
+.archive-month-card.generating {
+  border-color: var(--mb-accent);
+  opacity: 0.7;
+  pointer-events: none;
+}
+.archive-month-card .month-name {
+  font-weight: 700;
+  font-size: 15px;
+}
+.archive-month-card .month-meta {
+  font-size: 12px;
+  color: var(--mb-gray-500);
+}
+
 /* === RESPONSIVE === */
 @media (max-width: 768px) {
   .header { padding: 12px 16px; }
