@@ -177,10 +177,31 @@ body {
   margin-left: 4px;
   vertical-align: middle;
 }
+.kw-month-nav {
+  display: flex;
+  align-items: center;
+  padding: 8px 10px;
+  border: none;
+  background: transparent;
+  color: var(--mb-gray-500);
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: background 0.15s, color 0.15s;
+}
+.kw-month-nav:hover:not(:disabled) {
+  background: var(--mb-gray-100);
+  color: var(--mb-black);
+}
+.kw-month-nav:disabled {
+  opacity: 0.3;
+  cursor: default;
+}
 .kw-month-label {
   display: flex;
   align-items: center;
-  padding: 12px 16px 12px 0;
+  padding: 12px 10px;
   font-size: 13px;
   font-weight: 700;
   color: var(--mb-gray-500);
