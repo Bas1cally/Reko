@@ -18,6 +18,8 @@ const App = {
   monthWeeks: [], // alle KWs des Monats
   currentKw: null,
   currentYear: null,
+  viewMonth: null, // aktuell angezeigter Monat (0-basiert)
+  viewYear: null,  // aktuell angezeigtes Jahr
   participants: [],
   saveTimers: {},
   currentUser: null,
@@ -38,6 +40,9 @@ const App = {
     document.getElementById('app-content').style.display = 'none';
 
     try {
+      const now = new Date();
+      this.viewMonth = now.getMonth();
+      this.viewYear = now.getFullYear();
       this.calculateMonthWeeks();
       await this.loadParticipants();
       await this.loadAllMonthProtocols();
@@ -55,23 +60,17 @@ const App = {
     }
   },
 
-  // Alle KWs berechnen die im aktuellen Monat liegen
+  // Alle KWs berechnen die im angezeigten Monat liegen
   calculateMonthWeeks() {
     const now = new Date();
-    const year = now.getFullYear();
-    const month = now.getMonth(); // 0-based
-
-    // Aktuelle KW ermitteln (ISO)
-    this.currentYear = year;
+    this.currentYear = this.viewYear;
     this.currentKw = this.getISOWeek(now);
 
-    // Alle Montage im aktuellen Monat finden
     const weeks = [];
     const seen = new Set();
 
-    // Vom 1. des Monats bis zum letzten Tag
-    const firstDay = new Date(year, month, 1);
-    const lastDay = new Date(year, month + 1, 0);
+    const firstDay = new Date(this.viewYear, this.viewMonth, 1);
+    const lastDay = new Date(this.viewYear, this.viewMonth + 1, 0);
 
     for (let d = new Date(firstDay); d <= lastDay; d.setDate(d.getDate() + 1)) {
       const kw = this.getISOWeek(d);
@@ -84,6 +83,39 @@ const App = {
     }
 
     this.monthWeeks = weeks;
+  },
+
+  isViewingCurrentMonth() {
+    const now = new Date();
+    return this.viewMonth === now.getMonth() && this.viewYear === now.getFullYear();
+  },
+
+  async navigateMonth(delta) {
+    let m = this.viewMonth + delta;
+    let y = this.viewYear;
+    if (m > 11) { m = 0; y++; }
+    if (m < 0)  { m = 11; y--; }
+
+    // Nicht in die Zukunft navigieren
+    const now = new Date();
+    if (y > now.getFullYear() || (y === now.getFullYear() && m > now.getMonth())) return;
+
+    this.viewMonth = m;
+    this.viewYear = y;
+    this.protocols = {};
+    this.calculateMonthWeeks();
+
+    document.getElementById('loading').style.display = 'block';
+    document.getElementById('app-content').style.display = 'none';
+
+    await this.loadAllMonthProtocols();
+    this.renderKwTabs();
+
+    // Zur ersten vorhandenen KW wechseln (oder letzten wenn vergangener Monat)
+    const firstKw = this.monthWeeks[this.monthWeeks.length - 1];
+    if (firstKw) {
+      await this.switchToKw(firstKw.kw, firstKw.year);
+    }
   },
 
   getISOWeek(date) {
@@ -102,19 +134,36 @@ const App = {
   },
 
   getMonthName() {
-    const now = new Date();
-    return now.toLocaleDateString('de-DE', { month: 'long', year: 'numeric' });
+    const d = new Date(this.viewYear, this.viewMonth, 1);
+    return d.toLocaleDateString('de-DE', { month: 'long', year: 'numeric' });
   },
 
   renderKwTabs() {
     const container = document.getElementById('kw-tabs');
     container.innerHTML = '';
 
+    // Zurück-Button
+    const prevBtn = document.createElement('button');
+    prevBtn.className = 'kw-month-nav';
+    prevBtn.textContent = '‹';
+    prevBtn.title = 'Vorheriger Monat';
+    prevBtn.addEventListener('click', () => this.navigateMonth(-1));
+    container.appendChild(prevBtn);
+
     // Monatsname als Label
     const monthLabel = document.createElement('span');
     monthLabel.className = 'kw-month-label';
     monthLabel.textContent = this.getMonthName();
     container.appendChild(monthLabel);
+
+    // Vor-Button (deaktiviert wenn aktueller Monat)
+    const nextBtn = document.createElement('button');
+    nextBtn.className = 'kw-month-nav';
+    nextBtn.textContent = '›';
+    nextBtn.title = 'Nächster Monat';
+    nextBtn.disabled = this.isViewingCurrentMonth();
+    nextBtn.addEventListener('click', () => this.navigateMonth(1));
+    container.appendChild(nextBtn);
 
     for (const week of this.monthWeeks) {
       const tab = document.createElement('button');
@@ -178,6 +227,19 @@ const App = {
     this.protocol = this.protocols[kw];
 
     this.updateKwTabStates();
+
+    if (!this.protocol) {
+      // Kein Protokoll vorhanden (vergangener Monat ohne Einträge)
+      document.getElementById('loading').style.display = 'none';
+      document.getElementById('app-content').style.display = 'block';
+      document.getElementById('entries-container').innerHTML =
+        '<p style="color:var(--mb-gray-400); padding: 24px 0;">Kein Protokoll für diese Woche vorhanden.</p>';
+      document.getElementById('week-dates').textContent = `KW ${kw}`;
+      document.getElementById('btn-close-week').style.display = 'none';
+      document.querySelector('.attendance-section').style.display = 'none';
+      return;
+    }
+
     await this.render();
 
     // Normale User automatisch als "gelesen" markieren
@@ -196,22 +258,35 @@ const App = {
   },
 
   async loadOrCreateProtocolForKw(kw, year) {
-    // Erst schauen ob schon geladen
-    if (this.protocols[kw]) return;
+    // Erst schauen ob schon geladen (null = existiert nicht)
+    if (this.protocols[kw] !== undefined) return;
 
-    const { data, error } = await this.supabase.rpc('create_protocol_for_week', {
-      p_cw: kw,
-      p_year: year,
-    });
-    if (error) throw error;
+    if (this.isViewingCurrentMonth()) {
+      // Aktueller Monat: Protokoll erstellen falls nicht vorhanden
+      const { data, error } = await this.supabase.rpc('create_protocol_for_week', {
+        p_cw: kw,
+        p_year: year,
+      });
+      if (error) throw error;
 
-    const { data: proto } = await this.supabase
-      .from('protocols')
-      .select('*')
-      .eq('id', data)
-      .single();
+      const { data: proto } = await this.supabase
+        .from('protocols')
+        .select('*')
+        .eq('id', data)
+        .single();
 
-    this.protocols[kw] = proto;
+      this.protocols[kw] = proto;
+    } else {
+      // Vergangener Monat: nur vorhandenes Protokoll lesen
+      const { data: proto } = await this.supabase
+        .from('protocols')
+        .select('*')
+        .eq('calendar_week', kw)
+        .eq('year', year)
+        .maybeSingle();
+
+      this.protocols[kw] = proto || null;
+    }
   },
 
   async loadParticipants() {
