@@ -34,12 +34,50 @@
       betriebsrat: 'Betriebsratsmitglied',
     };
 
+    function showPausedError() {
+      const loading = document.getElementById('login-loading');
+      loading.innerHTML = `
+        <div style="text-align:center; padding: 20px; color: #c0392b;">
+          <div style="font-size: 2rem; margin-bottom: 12px;">&#9888;</div>
+          <strong>Datenbank pausiert</strong>
+          <p style="margin: 10px 0; font-size: 0.9rem; color: #555;">
+            Das Supabase-Projekt wurde wegen Inaktivität pausiert.<br>
+            Bitte das Projekt reaktivieren:
+          </p>
+          <a href="https://supabase.com/dashboard" target="_blank"
+             style="display:inline-block; margin: 8px 0; padding: 8px 16px;
+                    background:#3ecf8e; color:#fff; border-radius:6px;
+                    text-decoration:none; font-weight:bold;">
+            Supabase Dashboard &rarr;
+          </a>
+          <p style="margin-top: 14px; font-size: 0.8rem; color: #888;">
+            Seite wird automatisch neu geladen&hellip; (<span id="retry-countdown">30</span>s)
+          </p>
+        </div>`;
+
+      let seconds = 30;
+      const countdownEl = document.getElementById('retry-countdown');
+      const interval = setInterval(() => {
+        seconds--;
+        if (countdownEl) countdownEl.textContent = seconds;
+        if (seconds <= 0) {
+          clearInterval(interval);
+          window.location.reload();
+        }
+      }, 1000);
+    }
+
     (async () => {
       const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-      const { data: participants } = await sb
+      const { data: participants, error } = await sb
         .from('participants')
         .select('*')
         .order('sort_order');
+
+      if (error || !participants) {
+        showPausedError();
+        return;
+      }
 
       const grid = document.getElementById('participant-grid');
       const categories = [...new Set(participants.map(p => p.category))];
