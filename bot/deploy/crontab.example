@@ -7,5 +7,14 @@
 # Value-Lauf 2x taeglich (09:00 und 17:00 Serverzeit)
 0 9,17 * * *  cd /opt/reko-bot && /opt/reko-bot/.venv/bin/python -m bot.run >> /var/log/reko-bot.log 2>&1
 
+# Closing-Line + CLV erfassen (stuendlich, faengt Matches kurz vor Anpfiff ab)
+0 * * * *     cd /opt/reko-bot && /opt/reko-bot/.venv/bin/python -m bot.track close >> /var/log/reko-bot.log 2>&1
+
+# Ergebnisse werten + P&L (4x taeglich)
+30 */6 * * *  cd /opt/reko-bot && /opt/reko-bot/.venv/bin/python -m bot.track grade >> /var/log/reko-bot.log 2>&1
+
+# Woechentlicher Tracking-Report per Telegram (Montag 10:00)
+0 10 * * 1    cd /opt/reko-bot && /opt/reko-bot/.venv/bin/python -m bot.track report --send >> /var/log/reko-bot.log 2>&1
+
 # Elo-Ratings woechentlich neu berechnen (Montag 04:00)
 0 4 * * 1     cd /opt/reko-bot && /opt/reko-bot/.venv/bin/python -m bot.scripts.refresh_ratings >> /var/log/reko-bot.log 2>&1

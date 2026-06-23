@@ -14,6 +14,7 @@ from .. import config
 from ..matching.names import normalize_key
 from ..storage import db
 from . import elo
+from .score import mov_multiplier
 
 SURFACES = {"hard", "clay", "grass"}
 
@@ -30,7 +31,7 @@ class _PlayerState:
 
 
 def _iter_matches(tour: str):
-    """Liefert (date, match_num, surface, winner, loser) chronologisch sortiert."""
+    """Liefert (surface, winner, loser, score) chronologisch sortiert."""
     rows = []
     for path in sorted(config.DATA_DIR.glob(f"{tour}_matches_*.csv")):
         with path.open(newline="", encoding="utf-8") as fh:
@@ -43,10 +44,11 @@ def _iter_matches(tour: str):
                     sort_key = (int(date), int(row.get("match_num") or 0))
                 except ValueError:
                     continue
-                rows.append((sort_key, (row.get("surface") or "").strip().lower(), w, l))
+                rows.append((sort_key, (row.get("surface") or "").strip().lower(),
+                             w, l, row.get("score") or ""))
     rows.sort(key=lambda r: r[0])
-    for _key, surface, w, l in rows:
-        yield surface, w, l
+    for _key, surface, w, l, sc in rows:
+        yield surface, w, l, sc
 
 
 def _get(states: dict, name: str) -> _PlayerState:
@@ -59,7 +61,7 @@ def _get(states: dict, name: str) -> _PlayerState:
 
 
 def _update_dimension(winner: _PlayerState, loser: _PlayerState,
-                      attr: str, count_key: str | None) -> None:
+                      attr: str, count_key: str | None, mov: float = 1.0) -> None:
     rw = getattr(winner, attr)
     rl = getattr(loser, attr)
     ew = elo.expected_score(rw, rl)
@@ -69,6 +71,8 @@ def _update_dimension(winner: _PlayerState, loser: _PlayerState,
     else:
         kw = elo.k_factor(winner.n[count_key])
         kl = elo.k_factor(loser.n[count_key])
+    kw *= mov
+    kl *= mov
     setattr(winner, attr, elo.update(rw, 1.0, ew, kw))
     setattr(loser, attr, elo.update(rl, 0.0, 1.0 - ew, kl))
 
@@ -76,16 +80,17 @@ def _update_dimension(winner: _PlayerState, loser: _PlayerState,
 def train_tour(tour: str) -> list[db.Rating]:
     states: dict[str, _PlayerState] = {}
     n_matches = 0
-    for surface, w_name, l_name in _iter_matches(tour):
+    for surface, w_name, l_name, score in _iter_matches(tour):
         winner = _get(states, w_name)
         loser = _get(states, l_name)
+        mov = mov_multiplier(score) if config.ELO_USE_MOV else 1.0
 
-        _update_dimension(winner, loser, "overall", None)
+        _update_dimension(winner, loser, "overall", None, mov)
         winner.n_overall += 1
         loser.n_overall += 1
 
         if surface in SURFACES:
-            _update_dimension(winner, loser, surface, surface)
+            _update_dimension(winner, loser, surface, surface, mov)
             winner.n[surface] += 1
             loser.n[surface] += 1
         n_matches += 1
@@ -101,6 +106,9 @@ def train_tour(tour: str) -> list[db.Rating]:
             elo_clay=st.clay,
             elo_grass=st.grass,
             matches=st.n_overall,
+            matches_hard=st.n["hard"],
+            matches_clay=st.n["clay"],
+            matches_grass=st.n["grass"],
         )
         for key, st in states.items()
     ]

@@ -5,6 +5,8 @@ node_modules/
 # Tennis-Bot Artefakte
 bot/.venv/
 bot/state.db
+bot/bot.log
+bot/bot.log.*
 bot/data/raw/
 __pycache__/
 *.pyc

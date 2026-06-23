@@ -74,12 +74,13 @@ def _update(states, w_name, l_name, surface):
         loser.n[surface] += 1
 
 
-def backtest_tour(tour: str, eval_years: int = EVAL_YEARS):
+def collect_preds(tour: str, eval_years: int = EVAL_YEARS):
+    """Walk-Forward-Vorhersagen (p_player1, label) fuer die Auswertung."""
     states: dict = {}
-    preds: list[tuple[float, int]] = []  # (p_player1, label_player1_won)
+    preds: list[tuple[float, int]] = []
     years = [y for y, *_ in _iter_with_date(tour)]
     if not years:
-        return None
+        return preds
     cutoff = max(years) - eval_years + 1
 
     for year, surface, w_name, l_name in _iter_with_date(tour):
@@ -91,7 +92,24 @@ def backtest_tour(tour: str, eval_years: int = EVAL_YEARS):
             label = 1 if player1_is_winner else 0
             preds.append((p1, label))
         _update(states, w_name, l_name, surface)
+    return preds
 
+
+def logloss_of(preds: list[tuple[float, int]]) -> float:
+    n = len(preds)
+    if n == 0:
+        return float("inf")
+    eps = 1e-12
+    return -sum(
+        y * math.log(max(p, eps)) + (1 - y) * math.log(max(1 - p, eps))
+        for p, y in preds
+    ) / n
+
+
+def backtest_tour(tour: str, eval_years: int = EVAL_YEARS):
+    preds = collect_preds(tour, eval_years)
+    if not preds:
+        return None
     return _metrics(tour, preds)
 
 

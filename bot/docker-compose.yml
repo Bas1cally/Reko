@@ -1,0 +1,21 @@
+# Bequemes Aufsetzen auf dem VPS.
+# Einmal Modell bauen:
+#   docker compose -f bot/docker-compose.yml run --rm bot python -m bot.scripts.refresh_ratings
+# Value-Lauf (per Host-Cron):
+#   docker compose -f bot/docker-compose.yml run --rm bot python -m bot.run
+# Tracking:
+#   docker compose -f bot/docker-compose.yml run --rm bot python -m bot.track close
+#   docker compose -f bot/docker-compose.yml run --rm bot python -m bot.track grade
+services:
+  bot:
+    build:
+      context: ..
+      dockerfile: bot/Dockerfile
+    image: reko-bot
+    env_file: .env
+    volumes:
+      - botdata:/data        # state.db + heruntergeladene CSVs (persistent)
+    restart: "no"
+
+volumes:
+  botdata:
