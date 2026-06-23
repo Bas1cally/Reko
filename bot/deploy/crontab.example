@@ -1,0 +1,11 @@
+# ===========================================
+# Tennis Value-Bot - Cron (Beispiel)
+# Installieren:  crontab -e   und Zeilen einfuegen (Pfade anpassen).
+# Annahme: Projekt unter /opt/reko-bot, venv unter /opt/reko-bot/.venv
+# ===========================================
+
+# Value-Lauf 2x taeglich (09:00 und 17:00 Serverzeit)
+0 9,17 * * *  cd /opt/reko-bot && /opt/reko-bot/.venv/bin/python -m bot.run >> /var/log/reko-bot.log 2>&1
+
+# Elo-Ratings woechentlich neu berechnen (Montag 04:00)
+0 4 * * 1     cd /opt/reko-bot && /opt/reko-bot/.venv/bin/python -m bot.scripts.refresh_ratings >> /var/log/reko-bot.log 2>&1

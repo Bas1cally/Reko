@@ -1,0 +1,10 @@
+[Unit]
+Description=Tennis Value-Bot - 2x taeglich ausfuehren
+
+[Timer]
+# 09:00 und 17:00 lokale Serverzeit
+OnCalendar=*-*-* 09,17:00:00
+Persistent=true
+
+[Install]
+WantedBy=timers.target

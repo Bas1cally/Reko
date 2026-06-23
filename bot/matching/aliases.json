@@ -1,0 +1,5 @@
+{
+  "_comment": "Manuelle Overrides fuer Namen, die Fuzzy-Matching nicht zuverlaessig aufloest. Key = Name wie von der Odds-API geliefert (normalisiert), Value = Name wie in den Sackmann-Daten (normalisiert). Beispiel unten kann angepasst/erweitert werden.",
+  "alcaraz carlos": "carlos alcaraz",
+  "auger aliassime felix": "felix auger aliassime"
+}

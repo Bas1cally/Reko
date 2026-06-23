@@ -1,0 +1,11 @@
+[Unit]
+Description=Tennis Value-Betting Bot - Value-Lauf
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=/opt/reko-bot
+ExecStart=/opt/reko-bot/.venv/bin/python -m bot.run
+# Optional: eigener User statt root
+# User=reko

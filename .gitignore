@@ -1,3 +1,10 @@
 .env
 .DS_Store
 node_modules/
+
+# Tennis-Bot Artefakte
+bot/.venv/
+bot/state.db
+bot/data/raw/
+__pycache__/
+*.pyc
