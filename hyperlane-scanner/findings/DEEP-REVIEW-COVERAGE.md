@@ -31,6 +31,22 @@ else below was examined and judged sound** within its trust model.
 - `RateLimited` library — the `_validateAndConsumeFilledLevel` is internal
   (the public variant that once allowed a DoS was already removed in #6355).
 
+## Offchain layer (Rust) — the "where the sun doesn't shine" pass
+
+Where "verified" actually originates. Checked the two crown jewels:
+
+| Surface | File | Verdict |
+|---|---|---|
+| Checkpoint signing digest parity Rust ↔ Solidity | `rust/.../types/checkpoint.rs`, `utils.rs` vs `CheckpointLib.sol` | **Match.** Both = `keccak256(domain(4) ‖ merkleTreeHook(32) ‖ "HYPERLANE")` then EIP-191. Domain separation binds origin domain + tree address; announcements use a distinct `"HYPERLANE_ANNOUNCEMENT"` separator. No cross-chain / cross-tree / cross-purpose signature replay. |
+| Validator correctness before signing | `rust/.../agents/validator/src/submit.rs` | **Sound.** Rebuilds the merkle tree locally from indexed insertions, ingests to the finality-lagged on-chain "correctness checkpoint", and **panics rather than signs** if the local root ≠ on-chain root. A malicious feed can't get a signature over a root that doesn't match finalized chain state. |
+
+Trust model confirmed: validators attest only to verified on-chain state;
+relayers are untrusted and every ISM re-verifies on-chain; CCIP-read servers
+return data that the on-chain ISM re-checks (CCTP via Circle attestation,
+CommitmentReadIsm via commitment hash). The external-attacker-reachable
+surface offchain is therefore thin — the remaining risk is validator/relayer
+key/RPC compromise, which is opsec, not a code bug.
+
 ## Not yet reviewed (candidate next steps, honest gaps)
 
 - `CheckpointFraudProofs` / `AttributeCheckpointFraud` (fraud-proof math).
