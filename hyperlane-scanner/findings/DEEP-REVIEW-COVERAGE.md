@@ -40,6 +40,29 @@ else below was examined and judged sound** within its trust model.
   actually originates; a bug there can be as severe as a contract bug.
 - Cross-VM (Tron/Starknet) specific overrides.
 
+## Attacker-mindset pass ("think like a thief", not "is this function correct")
+
+Second pass framed around how to actually extract funds, not intended-model
+correctness. Targets and verdicts:
+
+| Thief angle | Where | Verdict |
+|---|---|---|
+| ERC4626 share-price / exchange-rate manipulation, out-of-order rate updates | `HypERC4626`, `HypERC4626Collateral` | Accounting is share-based; rate updates are monotonic by `rateUpdateNonce` and written only by the enrolled collateral router. Inflating the synthetic rate hurts the user, never lets you redeem more real assets. |
+| Cross-decimal / scale extraction | `TokenRouter._outbound/_inboundAmount`, `CrossCollateralRouter` | Both directions round down (protocol-favor); scale is owner-config, not attacker-influenced. |
+| Stuck-funds sweep, value-accounting in the command router | `QuotedCalls` | Universal-Router pattern: caller-scoped, `nonReentrant`, holds nothing between txs. Idle funds are sweepable-by-design (don't park funds in it) — accepted, not a protocol theft. |
+| Native-value reentrancy | all `.call{value}` / `sendValue` sites | Sends go to `msg.sender`/message recipient; no cross-user custody in the value paths. |
+| Permissionless approve / fee-hook approval abuse | `AbstractInterchainAccountRouter.approveFeeTokenForHook`, TokenRouter fee hook | Router holds no funds (ICAs do); approval targets an empty balance. |
+| Rate-limit bucket griefing (drain the limit to DoS legit transfers) | `RateLimitedIsm` in the live 3-of-3 aggregation | The `delivered()` gate ironically blocks pre-consumption; `validateMessageOnce` blocks double-consume. No free DoS. |
+| Amount-routing: structure theft as sub-threshold amounts to hit the weak ISM | `AmountRoutingIsm` + the 2 live `oUSDT` routes | Live "lower" ISM (< 250k USDT) is still the real default multisig, wrapped in a 2-of-2 aggregation with pausable. The "weak" path isn't weak. |
+| Low-threshold aggregations as OR-bypass | registry scan, all 231 warp routes | Every `threshold: 1/2` aggregation found is the standard "merkleRoot OR messageId multisig" (both real 3-of-5) or N-of-N with pausable. None reduces to a forgeable branch. |
+
+Registry composition scan (231 deployed warp routes): ISM usage is dominated
+by real multisig/aggregation (1113 aggregation, 983 merkleRoot, 981
+messageId). The 4 `rateLimitedIsm` occurrences are all AND-composed
+(threshold == module count) with a real verifying ISM; the 8 `trustedRelayerIsm`
+uses are a by-design trusted-relayer choice; no route was found where the
+RateLimitedIsm defect is independently reachable.
+
 ## What this means for a submission
 
 The RateLimitedIsm finding is real and PoC-backed, but currently mitigated
