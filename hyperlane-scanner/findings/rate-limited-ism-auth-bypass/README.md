@@ -1,9 +1,48 @@
-# RateLimitedIsm: complete authentication bypass via a vacuous `_isDelivered` check
+# RateLimitedIsm: `verify()`'s only check is always-true, dead code
 
 **Target**: `hyperlane-xyz/hyperlane-monorepo`, `solidity/contracts/isms/warp-route/RateLimitedIsm.sol`
 **Reviewed commit**: `1a31d0425f060339e1c14980f552c976d408ec91` (2026-07-24)
-**Severity (suggested)**: Critical — unauthenticated minting/release of bridged tokens
+**Severity (suggested)**: Medium as currently deployed / Critical if misconfigured — see "Real-world deployment check" below, read this before submitting.
 **Status**: Verified locally with a passing Foundry PoC against the real, unmodified contracts (see `RateLimitedIsm.AuthBypass.PoC.t.sol`).
+
+## Real-world deployment check (do this before submitting — updates the severity above)
+
+Checked `hyperlane-xyz/hyperlane-registry` (the separate repo listing actual
+mainnet deployments). Exactly two warp routes reference `rateLimitedIsm`
+today, both on BSC (`deployments/warp_routes/PB/eni-deploy.yaml` and
+`deployments/warp_routes/evENI/bsc-deploy.yaml`). Both configure it inside a
+`staticAggregationIsm` with **`threshold` equal to the total module count
+(3 of 3)**, alongside a `defaultFallbackRoutingIsm` (real per-domain
+signature verification) and a `pausableIsm`:
+
+```yaml
+modules:
+  - type: rateLimitedIsm              # the broken check described below
+  - type: defaultFallbackRoutingIsm   # real verification
+  - type: pausableIsm
+threshold: 3
+```
+
+`AbstractAggregationIsm.verify()` requires `_threshold` to reach exactly 0,
+decrementing once per module that has metadata supplied **and** returns
+`true`. With `threshold == module count`, every module — including the real
+`defaultFallbackRoutingIsm` — must independently verify; an attacker cannot
+satisfy the aggregation by omitting metadata for the real ISM and only
+supplying it for `rateLimitedIsm`, because that would leave `_threshold`
+non-zero. **So for these two live deployments, the bug below is not
+independently exploitable today** — the real ISM still gates security.
+
+The bug itself is still real (confirmed by the PoC): `RateLimitedIsm`'s own
+check contributes nothing, is dead code, and does not do what its author's
+doc comment claims. The risk is latent/architectural, not "funds at risk
+right now": nothing in the contract or the SDK config schema prevents a
+*future* deployer from using it standalone (exactly as the project's own
+`RateLimitedIsm.t.sol` does) or inside an aggregation with a lower
+threshold that `rateLimitedIsm` alone (or with only non-verifying modules)
+could satisfy — either of those would reproduce the full critical bypass
+demonstrated in the PoC. Frame the submission accordingly: a real logic bug
+in a shipped, SDK-exposed ISM type, currently mitigated by how two
+deployers happened to compose it, not by anything the contract enforces.
 
 ## Summary
 
@@ -84,6 +123,14 @@ For a minting/synthetic token router this is unauthenticated, unlimited
 break of the bridge's security model, no relayer/validator/private key
 involved on the attacker's side.
 
+As shown above, the two currently-deployed routes avoid this by requiring
+`threshold == module count`, so this specific class of impact is not live
+against them today. The impact statement above describes what happens
+under the standalone/low-threshold configuration the contract itself does
+nothing to prevent — call it out as a design/logic flaw with critical
+*potential* impact rather than an active drain, unless further checking
+turns up a deployment configured differently than the two found here.
+
 ## Proof of Concept
 
 `RateLimitedIsm.AuthBypass.PoC.t.sol` (Foundry test, run against the
@@ -151,10 +198,16 @@ set before the ISM even runs. Options for the Hyperlane team to consider:
 
 - KYC and the actual Immunefi submission are being handled by the user, not
   this tool — this write-up plus the passing PoC is the technical package.
-- Before submitting, double-check whether any currently-deployed mainnet
-  warp route actually uses `RateLimitedIsm` as (or as a satisfiable branch
-  of) its ISM — that determines whether this is "critical, actively
-  exploitable against deployed funds" vs. "critical logic bug in an
-  available-but-maybe-unused ISM type." Either way it qualifies under
-  Immunefi's smart-contract scope (core repo, `solidity/contracts/isms/`),
-  but confirming live usage strengthens the report.
+- Registry checked on the date of this report; deployments can change.
+  Re-check `hyperlane-registry` for new `rateLimitedIsm` usages (and their
+  aggregation thresholds) right before submitting, in case a third
+  deployment appeared with a lower threshold or standalone config — that
+  would upgrade this from "logic bug" to "actively exploitable, funds at
+  risk," which is a materially stronger submission.
+- Don't lead with "critical, drains any bridge" — Immunefi triagers will
+  check the registry too, and an overstated impact claim that doesn't
+  survive that check costs credibility. Lead with the honest framing above:
+  confirmed broken security check in a shipped ISM type + working PoC,
+  currently not exploitable against the two live deployments because of how
+  they're composed, but exploitable the moment it's used the way the
+  project's own unit test uses it.
