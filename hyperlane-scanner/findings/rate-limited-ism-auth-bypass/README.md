@@ -96,6 +96,34 @@ recipient's sole ISM, with empty metadata, is the pattern the authors
 themselves test and the SDK exposes as a standalone `IsmType.RATE_LIMITED`
 config option.
 
+## The same pattern done correctly elsewhere (proof this is a real defect, not a design choice)
+
+Hyperlane's own `TimelockRouter`
+(`solidity/contracts/isms/routing/TimelockRouter.sol`) implements the exact
+same "pre-verify on one message, then let `verify()` just check a stored
+flag" pattern — but does it **correctly**, which shows `RateLimitedIsm` is
+genuinely broken rather than following an accepted convention:
+
+```solidity
+// TimelockRouter: the flag (readyAt) is set only via Router._handle,
+// which runs behind onlyMailbox + _mustHaveRemoteRouter(_origin) == _sender.
+function _handle(uint32, bytes32, bytes calldata _message) internal override {
+    bytes32 messageId = abi.decode(_message, (bytes32));
+    require(readyAt[messageId] == 0, "...already preverified");
+    readyAt[messageId] = uint48(block.timestamp) + timelockWindow;
+}
+// verify() then only checks the timelock elapsed — safe, because the flag
+// could only be set by a validator-attested message from the enrolled router.
+```
+
+`TimelockRouter`'s "just check a flag" `verify()` is safe because the flag is
+written **only** by a message that itself passed a real ISM (`Router.handle`
+is `onlyMailbox` and requires `_mustHaveRemoteRouter(_origin) == _sender`).
+`RateLimitedIsm` skips precisely this step: its flag (`delivered()`) is
+written by the Mailbox for *every* message before *any* verification, so the
+check authenticates nothing. Same pattern, one guarded by a real
+router/validator check and one not — that asymmetry is the bug.
+
 ## Root cause
 
 Author intent, per the doc comment on `verify()`:
