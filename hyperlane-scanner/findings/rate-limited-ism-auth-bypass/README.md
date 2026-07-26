@@ -2,8 +2,47 @@
 
 **Target**: `hyperlane-xyz/hyperlane-monorepo`, `solidity/contracts/isms/warp-route/RateLimitedIsm.sol`
 **Reviewed commit**: `1a31d0425f060339e1c14980f552c976d408ec91` (2026-07-24)
-**Severity (suggested)**: Medium as currently deployed / Critical if misconfigured — see "Real-world deployment check" below, read this before submitting.
-**Status**: Verified locally with a passing Foundry PoC against the real, unmodified contracts (see `RateLimitedIsm.AuthBypass.PoC.t.sol`).
+**Severity (honest, after re-examination): Informational / most likely NOT payable — do not submit as High/Critical. See the verdict box.**
+**Status**: PoC passes against unmodified contracts, but the scenario it needs is a misconfiguration the design arguably tells you not to make.
+
+> ## ⚠️ Skeptical re-examination — read this first
+>
+> After reviewing the rest of the ISM layer, I pressure-tested my own
+> finding and it **deflated substantially**. Be honest with yourself before
+> spending KYC + submission effort on it:
+>
+> 1. **`RateLimitedIsm` is a `moduleType() == NULL` "gate" ISM — the same
+>    explicit category as `NoopIsm` and `PausableIsm`.** All three return
+>    `true` without cryptographically authenticating the message. `NoopIsm`
+>    literally `return true`; `PausableIsm` returns `true` unless paused;
+>    `RateLimitedIsm` returns `true` for a delivered message within the rate
+>    limit. Non-authentication is the **design** of this family, not a bug.
+>    The SDK (`ismTypeToModuleType`) buckets `RATE_LIMITED`, `PAUSABLE`,
+>    `TRUSTED_RELAYER`, `NOOP` together as `ModuleType.NULL`.
+> 2. **I mischaracterized the `_isDelivered` check.** It was never meant to
+>    authenticate. Its real, correct job is to stop someone calling
+>    `verify()` directly to drain the rate-limit bucket for messages that
+>    were never delivered. It does that job fine. Calling it "broken
+>    authentication" was wrong — it isn't authentication at all.
+> 3. **Both live deployments compose it correctly** (aggregation, threshold
+>    == module count, with a real multisig). Nothing on-chain is at risk.
+>
+> **What's left is weak:** unlike its NULL siblings, `RateLimitedIsm` carries
+> extra machinery (`_isDelivered`, `messageValidated`, `onlyRecipient`) that
+> makes it *look* like it authenticates, so a careless deployer is more
+> likely to use it standalone and get zero security. That's a real footgun,
+> but it's an **informational / hardening** point (add a NatSpec warning +
+> an SDK lint rejecting standalone `RATE_LIMITED` as a warp-route ISM), not a
+> protocol vulnerability. A triager will almost certainly close a
+> High/Critical submission as "working as intended — NULL-type modifier ISM,
+> compose it, see NoopIsm/PausableIsm." Submit it (if at all) as a low-sev
+> hardening note, framed honestly, with zero economic-impact claim.
+>
+> The PoC below is still technically valid (standalone RateLimitedIsm = free
+> mint). Keep it — but as a demonstration of the footgun, not as a claimed
+> live exploit.
+
+**Original severity framing (kept for the record, now superseded by the box above):** Medium as deployed / Critical if misconfigured.
 
 ## Real-world deployment check (do this before submitting — updates the severity above)
 
