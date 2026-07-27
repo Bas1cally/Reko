@@ -214,9 +214,18 @@ The full upstream suite (169 tests) passes unchanged in the same tree.
   argument for it being a defect is the doc-comment contradiction plus the fact
   that the loss is avoidable — not that the code looks accidental. Expect that
   argument to be the crux of the report.
-- I could not read `https://docs.vesu.xyz/security/disclosures` (403 from this
-  environment) to check it against the program's "Various disclosures" known-issue
-  entry. **Check that page before submitting.**
+- **Checked against all four published disclosures — none covers this.** For the
+  record:
+
+  | Disclosure | Subject | Bearing on this finding |
+  |---|---|---|
+  | 2024-06-07 Extension Trust | v1 Singleton↔Extension trust model | That architecture no longer exists in v2 |
+  | 2024-12-03 Fee Accounting | `fee_shares` denominator missing the `(1 − fee_rate)` term | **Already fixed in v2** — `common.cairo:170` uses `total_assets + (accrued_interest − fee)`, which is the corrected formula |
+  | 2024-12-03 Share Inflation | `INFLATION_FEE_SHARES` reset could be triggered | **Already fixed in v2** — `add_asset` burns the inflation fee permanently, no reset path exists |
+  | 2025-06-04 Rounding Convention | `receive_as_shares` in `liquidate_position` | **Already fixed in v2** — the flag and the code path are gone |
+
+  This finding is in `compute_liquidation_amounts`' bad-debt comparison, which
+  none of the four touches.
 - Live pair parameters were read from the pinned `vesuxyz/changelog` config, not
   from chain — every Starknet RPC is blocked by this environment's egress policy.
   Confirm on-chain with:
