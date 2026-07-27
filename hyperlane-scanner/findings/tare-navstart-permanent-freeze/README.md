@@ -152,9 +152,11 @@ the gap: the disclosed consequence is an inventory nuisance. The actual conseque
 freeze of an unrelated vault's entire operational surface.
 
 **Route C — no attacker at all.** If a full sweep takes more wall-clock time than
-`maxNavComputationTime`, the third disjunct fires every cycle and the vault self-bricks. This variant
-*is* recoverable, because `setMaxNavComputationTime` is not idle-gated. Worth reporting as a
-sub-case: it shows the restart-with-no-escape shape is reachable through ordinary growth, not only
+`maxNavComputationTime`, the third disjunct fires every cycle and the vault self-bricks. The contest
+Q&A gives the intended production values: **`maxNavComputationTime` ~30 minutes to 1 hour**, with
+`maxNavAge` ~4–10h. A sweep that needs more batches than fit in 30 minutes of block time therefore
+never finalises. This variant *is* recoverable, because `setMaxNavComputationTime` is not idle-gated
+— but it shows the restart-with-no-escape shape is reachable through ordinary growth, not only
 through malice.
 
 Routes A and C need no trusted role whatsoever. That matters for the trust-model argument below.

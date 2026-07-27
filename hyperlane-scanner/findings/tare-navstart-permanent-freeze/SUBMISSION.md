@@ -66,14 +66,37 @@ cycle open holds the entire vault closed.
    `pendingNav`, `maxNavComputationTime`) exists to serve. **Measured threshold** (harness, verbatim
    `updateNav`, per-loan reads matching `getLoanValues`): a sweep costs `162,815 + ~4,265 × n` gas, so
    `_navLoanIds.length` needs to be **above ~2,300 loans** for a single 10M-gas transaction to be
-   impossible (~3,470 at 15M, ~6,930 at a full 30M block). The real path additionally materialises a
-   5-field `LoanValue[]` across an external call, so the true threshold is **lower** than measured.
+   impossible. Two factors push the real threshold **lower** than that figure: the real path also
+   materialises a 5-field `LoanValue[]` across an external call, and the deployment target is
+   **Avalanche C-Chain**, whose block gas limit is materially below Ethereum's — every value under
+   30M moves the threshold down.
 2. `PORTFOLIO_MANAGER` or `INVESTOR_MANAGER` needs to call `updateNav()` to set `navStart` to go from
    `0` to non-zero — this happens on every routine NAV refresh and is required before any deposit or
    redemption can be approved.
-3. For the zero-cost unlimited variant only: guardian needs to have called `approveOriginator()` on
-   the attacker, and the attacker needs to call `registerAddress(Roles.Investor, <vault address>)` to
-   add the vault to its own address book (permissionless per caller).
+3. The attacker needs to hold one loan NFT per `updateNav` transaction — loan NFTs are freely
+   transferable and tradeable through `LoansExchange`, and the trust model states that the investor
+   identified by NFT ownership "can potentially be untrusted".
+   *(Only for the cheaper amplifier variant: guardian would need to have called `approveOriginator()`
+   on the attacker, who then calls `registerAddress(Roles.Investor, <vault address>)` on its own
+   permissionless book. Not required for the finding.)*
+
+## Scope
+
+Three clauses of the contest's own Q&A place this in scope, and one nearby exclusion does not reach it:
+
+- **In scope, explicitly:** *"Any value or array-length input reachable by an **untrusted** party
+  (Borrower, Investor, or an arbitrary caller) that is not adequately bounded **is in scope**."*
+  The unsolicited NFT push is exactly that — an unbounded, unauthenticated input from an arbitrary
+  caller that drives `updateNav`'s restart branch.
+- **The exclusion does not apply.** The Q&A excludes array-length DoS where *"the resulting gas/DoS
+  exposure requires a **trusted role** to supply an oversized array."* No oversized array is supplied
+  here by anyone. `_navLoanIds` grows through ordinary curation of a real portfolio; what forces the
+  restart is an untrusted third party, not an argument passed by a manager.
+- **Named impacts:** the Q&A lists as items of interest *"Loans NFT being stuck"* (the vault's entire
+  portfolio, since `transferLoans` is gated behind the stuck flag) and *"Going into a state that is
+  unrecoverable (bricking)"* (every privileged entry point, with no on-chain reset).
+- **Trust model:** the finding's primary route uses no trusted role at all. Where a trusted role is
+  mentioned, it is only as a cheaper variant, and it is flagged as such rather than relied on.
 
 ---
 
@@ -93,13 +116,18 @@ reacting to it is sufficient — no front-running is required.
 1. **`PORTFOLIO_MANAGER` calls `updateNav(batchSize)`** on a portfolio too large to sweep atomically.
    `navStart` is set to `block.timestamp`, `lastOwnershipNonce` is snapshotted, the cursor advances by
    `batchSize`, and the cycle does not finalise.
-2. **The attacker calls `Loans.create(borrower, investor = <vault address>, servicer, originator, principalAmount, timestamp)`.**
-   `Loans._create` validates the investor only against the *originator's own* address book and then
-   calls `loansNFT.mint(investor, loanId)`. The vault is never consulted, and no tokens move anywhere
-   in the function. `LoansNFT._update` bumps `ownershipNonce[vault]`.
-   *(Equivalent, without originator status: `LoansNFT.transferFrom(attacker, vault, tokenId)` with any
-   loan NFT. Non-safe transfers are used deliberately protocol-wide, so the vault has no receiver hook
-   with which to reject the delivery.)*
+2. **The attacker calls `LoansNFT.transferFrom(attacker, <vault address>, tokenId)`** with any loan
+   NFT they hold. `LoansNFT._update` bumps `ownershipNonce[vault]`. The vault cannot refuse: the
+   protocol deliberately uses the non-safe ERC-721 variants (known issue #20), so there is no
+   receiver hook to reject the delivery, and `LoansNFT` is not `Pausable` — `_update` has no pause
+   check, so no pause anywhere in the system stops this.
+   No role is required. This is the route the finding rests on, and the contest's own trust model
+   names it: *"The Investor is identified by loan-NFT ownership which can potentially be untrusted."*
+   *(Cheaper variant, if the attacker also holds originator approval: `Loans.create(..., investor = <vault>, ...)`
+   mints a fresh NFT into the vault for free — `_create` validates the investor only against the
+   originator's own book and moves no tokens. Originator is listed as trusted **without** the
+   "can hurt other loans/users" carve-out that Borrower/Investor/Servicer get, so this variant is
+   offered only as an amplifier, not as the basis of the finding.)*
 3. **`PORTFOLIO_MANAGER` calls `updateNav(batchSize)` again.** `currentNonce != lastOwnershipNonce`, so
    the restart branch fires: `navCursor = 0`, `pendingNav = 0`. The batch the manager just paid for is
    discarded and the sweep begins again from index zero.
