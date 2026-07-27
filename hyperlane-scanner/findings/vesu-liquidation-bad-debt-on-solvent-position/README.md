@@ -1,6 +1,26 @@
 # Vesu v2: liquidations book bad debt against lenders on positions that are still over-collateralised
 
-**Target**: `vesuxyz/vesu-v2` — Immunefi program `vesu`, max **$100,000**, **no KYC**.
+**Target**: `vesuxyz/vesu-v2`, `src/pool.cairo`.
+
+> ## ⚠️ Programme status is UNVERIFIED — read this before acting on the scope claims
+>
+> Every statement in this report about the Immunefi programme — the $100,000
+> maximum, "no KYC", the eleven in-scope files, the `vesu.xyz` Primacy-of-Impact
+> entry — comes from an **unofficial community mirror**
+> ([`infosec-us-team/Immunefi-Bug-Bounty-Programs-Unofficial`](https://github.com/infosec-us-team/Immunefi-Bug-Bounty-Programs-Unofficial)),
+> not from immunefi.com. `immunefi.com` is egress-blocked from the environment
+> this work was done in and was never reachable, so the listing was never
+> confirmed at source.
+>
+> Mirror state as of its last scrape (2026-07-26): `project/vesu.json` present,
+> `inviteOnly: false`, `endDate: null`, `maxBounty: 100000`, `kyc: false`,
+> `updatedDate: 2026-05-27`.
+>
+> **The technical finding below does not depend on any of this** — it is a defect
+> in code that is deployed and live. Only the question of *where to send it* is
+> open. See `../vesu-programme-status.md`.
+
+Per that mirror: Immunefi programme `vesu`, max **$100,000**, **no KYC**, and
 `src/pool.cairo` is an explicit in-scope `smart_contract` asset.
 **File**: `src/pool.cairo` → `Pool::compute_liquidation_amounts` (lines 716–788)
 **Reachability**: confirmed against Vesu's own mainnet configuration — see below.
