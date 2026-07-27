@@ -3,9 +3,10 @@
 **Target**: Sherlock contest `tare-io` (`sherlock-scoping/tare-io__tare-contracts`), scope 2,542 nSLOC,
 total rewards 50,000 USDC. Contest window: **20 Jul 2026 17:00 → 29 Jul 2026 17:00 UTC**.
 **File**: `contracts/misc/Rescuable.sol` → `rescueERC20Tokens`, as inherited (unmodified) by `contracts/Loans.sol`.
-**Status**: root cause fully verified against pasted source. PoC pending one more file
-(`GuardianAccessControl.sol`) to pin down the exact role-grant mechanics; narrative and impact
-analysis below do not depend on it.
+**Status**: root cause and PoC both fully verified against pasted source (`Loans.sol`,
+`LoansLedger.sol`, `LoansAuth.sol`, `Rescuable.sol`, `GuardianAccessControl.sol`, `LoansNFT.sol`).
+`PoC.t.sol` in this folder is a complete Foundry test — drop it into `test/` in a local clone and
+run `forge test --match-contract RescuableDrainsLoanCash -vvvv`.
 
 ---
 
@@ -137,18 +138,25 @@ Since `Rescuable` is a shared base with no knowledge of `currency`, the cleanest
 `_isRescuable(address token)` hook that `Rescuable` calls before transferring, overridden in `Loans`
 to return `false` for `address(currency)`.
 
-## Reproduction (PoC — pending one input)
+## Reproduction (PoC — complete)
 
-Plan: deploy `Loans` with a mock ERC20, `initialGuardian`, `initialRecoveryAddress`; originate,
-fund, and disburse a loan so `Loans` legitimately custodies real tokens with a matching `ACC_CASH`
-ledger entry; have the guardian call `rescueERC20Tokens(address(mockUSDC), type(uint256).max)`;
-assert the contract's token balance drops while the loan's `ACC_CASH` ledger balance is unchanged;
-assert a subsequent legitimate `investorWithdraw`/`servicerWithdraw` on that loan reverts.
+See `PoC.t.sol`. Sequence:
 
-Blocked on: exact role-grant mechanics in `GuardianAccessControl.sol` (is `GUARDIAN_ROLE` granted
-via `_initGuardian` alone, or via a separate `grantRole` call; is `hasRole` standard OZ
-`AccessControl`). Everything else needed for the test (constructors, `Roles` enum, ledger account
-IDs) is already in hand from the pasted files.
+1. Deploy `Loans` + `LoansNFT`, wire them together, approve an originator, have the originator
+   self-register a borrower/investor/servicer under its own address book (all per the real
+   `LoansAuth`/`create` flow — nothing shortcut or mocked away).
+2. Originate a 1,000,000 USDC loan, fund it from the investor, disburse it to the borrower.
+   Confirms the normal lifecycle moves real tokens exactly as the ledger expects at every step.
+3. Borrower repays 400,000 USDC via `pay()`. Now `Loans` legitimately custodies 400,000 real USDC,
+   and the loan's `ACC_CASH` ledger entry says exactly 400,000 — asserted in
+   `test_ledgerAndRealBalanceAgreeBeforeRescue`.
+4. Guardian calls `rescueERC20Tokens(address(usdc), type(uint256).max)`. Real balance → 0, funds
+   land at `recoveryAddress`. The ledger's `ACC_CASH` entry is untouched — still 400,000.
+5. Servicer calls `refundBorrower(loanId, ACC_BORROWER_PAYMENT_CLEARING, 400_000e6, ...)` — a
+   normal, legitimate action the **ledger considers fully backed** (`fromBalance >= amount` passes
+   at 400,000 ≥ 400,000). It reverts anyway, inside the ERC20 transfer, because the real balance
+   is gone. This is the proof: the ledger-level solvency check is no longer meaningful once
+   `rescueERC20Tokens` has run, for every remaining outstanding balance on every loan.
 
 ## Not yet reviewed in this contest
 
