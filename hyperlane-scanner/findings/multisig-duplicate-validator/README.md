@@ -2,6 +2,7 @@
 
 **Target**: `hyperlane-xyz/hyperlane-monorepo`
 - `solidity/contracts/libs/StaticAddressSetFactory.sol` (`StaticThresholdAddressSetFactory.deploy`)
+- `solidity/contracts/libs/StaticWeightedValidatorSetFactory.sol` (`deploy` — no validation at all)
 - `solidity/contracts/isms/multisig/StorageMultisigIsm.sol` (`AbstractStorageMultisigIsm.setValidatorsAndThreshold`)
 - `typescript/sdk/src/ism/types.ts` (`MultisigConfigSchema`)
 
@@ -74,6 +75,75 @@ has no equivalent guard at **any** layer:
 
 The static factory is the dominant deployment path: the registry shows 983
 `merkleRootMultisigIsm` and 981 `messageIdMultisigIsm` instances.
+
+## The weighted variant is strictly worse
+
+`AbstractStaticWeightedMultisigIsm.verify` uses the identical monotonic cursor,
+but **sums weights** instead of counting slots:
+
+```solidity
+while (_validatorIndex < _validators.length &&
+       _signer != _validators[_validatorIndex].signingAddress) { ++_validatorIndex; }
+require(_validatorIndex < _validators.length, "Invalid signer");
+_totalWeight += _validators[_validatorIndex].weight;   // <-- summed
+++_validatorIndex;
+```
+
+So a duplicated entry doesn't merely fill an extra slot — it **adds that
+validator's weight a second time**, directly multiplying their voting power.
+`[{A, 50%}, {A, 50%}, {B, 50%}]` lets A alone reach a 100% threshold.
+
+And `StaticWeightedValidatorSetFactory.deploy` performs **no validation
+whatsoever** — not even the `0 < threshold <= length` guard the plain factory
+has. Two consequences, both demonstrated in `WeightedMultisigDuplicate.PoC.t.sol`:
+
+1. `test_duplicateValidator_weightDoubleCounted` — duplicate → one key reaches
+   a 100% threshold (with `test_cleanSet_oneValidatorCannotReachFullWeight` as
+   the control).
+2. `test_factoryAcceptsWeightsExceedingTotalWeight` — validator weights are not
+   required to sum to (or stay within) `TOTAL_WEIGHT = 1e10`. A set summing to
+   `2 * TOTAL_WEIGHT` with a nominal "60%" threshold (`6e9`) is really a 33%
+   threshold. Nothing rejects it.
+
+```
+[PASS] test_cleanSet_oneValidatorCannotReachFullWeight()
+[PASS] test_duplicateValidator_weightDoubleCounted()
+[PASS] test_factoryAcceptsWeightsExceedingTotalWeight()
+```
+
+## Could an attacker *engineer* the misconfiguration rather than wait for it?
+
+The fair objection to a config-dependent finding is "that needs a mistake."
+So: what would actually stop a duplicate from reaching production? Traced the
+whole pipeline — **nothing does, at any layer:**
+
+| Pipeline stage | Guard against duplicate validators |
+|---|---|
+| `hyperlane-registry` CI (`validate-file-data.js`, `validate-file-path.js`, `validate-svg.js`) | ❌ none — the string "validator" does not appear anywhere in the registry's scripts or `src/` |
+| SDK `MultisigConfigSchema` | ❌ none — `z.object({ validators: z.array(ZHash), threshold: z.number() })`, no `.refine()` |
+| SDK deploy path (`multisigConfigToIsmConfig`) | passes the config through unchanged (`.map(v => v.address)`) — introduces nothing, filters nothing |
+| EVM `StaticThresholdAddressSetFactory.deploy` | ❌ only `0 < threshold <= length` |
+| EVM `StaticWeightedValidatorSetFactory.deploy` | ❌ **no validation at all** |
+| EVM `AbstractStorageMultisigIsm.setValidatorsAndThreshold` | ❌ only `0 < threshold <= length` |
+| Sealevel `validate_config` | ✅ rejects |
+
+No SDK code path *creates* duplicates on its own (`collectValidators` returns a
+`Set`, and it is only used for checking/reporting) — so the duplicate has to
+enter via the source config. But once it is in the config, **the only thing
+between it and a silently halved quorum is a human reading a YAML diff full of
+similar-looking hex addresses.**
+
+Realistic threat model, stated honestly: a validator operator who wants
+unilateral signing power submits a rotation PR that leaves their address listed
+twice; or a duplicate slips in while merging/templating chain configs. Both
+produce a set that passes every automated check, deploys cleanly, and reports
+the nominal M-of-N everywhere.
+
+**Do not oversell this.** It still depends on a review failure — that is social
+engineering / process, not a purely technical exploit, and many Immunefi
+programs treat such findings as out of scope or Low. The defensible claim is
+narrow and true: *the EVM pipeline has no automated defense at any layer, and
+the team's own Solana implementation proves they consider this a real risk.*
 
 ## Impact
 
