@@ -31,6 +31,19 @@ That is the team explicitly saying "we maintain this by remembering to call a fu
 we have not verified we always do." That is a genuinely open question, not a documented issue — the
 31-item list has no entry for "function X forgets to invalidate NAV."
 
+### STATUS: pursued — see `tare-nav-staleness-loan-ledger/`
+
+This lead was followed through. Result: of the six NAV inputs the invariant names, five are
+genuinely covered (two by the nonce/version checks in `_requireFreshNav`, three by explicit
+`_invalidateNav()` calls at vault-side mutation sites). The sixth — **the loan ledger** — has no
+coverage at all, because it is the only one mutated outside the vault, and `Loans` has no callback,
+nonce, or event the vault consumes. `maxNavAge` is the only thing standing between a servicer
+charge-off and a mispriced redemption.
+
+Write-up, severity argument and PoC: `tare-nav-staleness-loan-ledger/README.md`. Note the
+verification banner there — the repo clone was lost with the container, so the quoted code could not
+be re-read at write-up time and needs a re-check before submission.
+
 ### Concrete next step
 
 Read `PortfolioVault.sol` (601 lines, not yet reviewed this session) function by function. For
