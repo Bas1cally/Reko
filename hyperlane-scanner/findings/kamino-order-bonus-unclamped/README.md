@@ -96,40 +96,64 @@ if liquidation_bonus_rate > effective_max_bonus_rate { effective_max_bonus_rate 
 The order-execution sibling is missing the `configured_max_bonus_rate` half.
 This is an internal inconsistency, not a design decision.
 
-## Proof
+## Proof — measured against the real production function
 
-`poc_test.rs` — appended to `obligation_order_operations.rs` and run with
-`cargo test -p kamino_lending --lib poc_unclamped_bonus -- --nocapture`:
+`poc_test.rs` builds a **legitimate** order (`validate_order` accepts it,
+asserted in the test), evaluates the condition exactly as
+`ConditionType::LiquidationLtvCloserThan` does, and calls the real
+`calculate_order_execution_bonus_rate` — including its `diff_to_bad_debt` cap.
 
 ```
-normalized_distance_from_threshold = 6.000000000000004336
-interpolated bonus rate = 0.600000000000000466  (order max = 0.10, sanity limit = 0.10)
-test ... ok
+cargo test -p kamino_lending --lib poc_unclamped_bonus -- --nocapture
 ```
 
-Scenario: `LiquidationLtvCloserThan` with a 1-point buffer on a reserve whose
-unhealthy LTV is 0.70, after the LTV gaps to 0.75.
+```
+configured max bonus      = 0.0999999999999999995
+sanity limit              = 0.1
+normalized distance       = 6.000000000000004336
+EFFECTIVE bonus rate      = 0.25
+collateral multiplier     = 1.25 (vs 1.0999999999999999995 if capped correctly)
 
-- condition threshold `t = 0.70 − 0.01 = 0.69`
-- distance `= (0.75 − 0.69) / (0.70 − 0.69) = 6`
-- bonus `= 0% + 6 × (10% − 0%) = 60%` — **6× the validated maximum**
-- capped only by `1 − no_bf_ltv`; at `no_bf_ltv = 0.75` that is **25%**
+bonus at trigger LTV 70%  = 0.100000000000000441
+peak bonus  = 0.280000000000000001 at LTV 72%
+configured/validated cap  = 0.0999999999999999995
 
-**Effective bonus: 25% where the protocol validated a 10% ceiling.**
+test order_execution_bonus_exceeds_its_own_validated_maximum ... ok
+test executor_can_wait_for_a_bonus_far_above_the_cap ... ok
+```
 
-Further parameter points, same arithmetic:
+Order used: `LiquidationLtvCloserThan`, 1-point buffer, bonus range
+[0%, 10%] — the maximum the protocol permits. Reserve liquidates at 70% LTV.
 
-| Order | unhealthy LTV | LTV | distance | theoretic | effective | vs 10% cap |
-|---|---|---|---|---|---|---|
-| `LiqLtvCloserThan` buf 0.01, bonus [0%, 10%] | 0.70 | 0.75 | 6.0 | 60% | 25% | 2.5× |
-| same, with borrow factor (`no_bf_ltv` 0.68) | 0.70 | 0.75 | 6.0 | 60% | 32% | 3.2× |
-| `LiqLtvCloserThan` buf 0.02, bonus [1%, 5%] | 0.80 | 0.86 | 4.0 | 17% | 14% | 1.4× |
-| `UserLtvAbove` t 0.75, bonus [1%, 5%] | 0.80 | 0.88 | 2.6 | 11.4% | 11.4% | 1.14× |
+**At 75% LTV the executor receives 25% instead of the validated 10%**; the
+collateral multiplier applied to the seized amount is `1.25` rather than `1.10`.
 
-The overshoot grows as the gap between the order threshold and the liquidation
-threshold narrows — and configuring a *tight* buffer is the rational use of
-`LiquidationLtvCloserThan`, whose entire purpose is "deleverage me just before
-I would be liquidated".
+The protocol's own log line confirms it is capping against the wrong bound —
+at 90% LTV it prints a theoretic bonus of `2.10` (210%) reduced only to
+`1 - ltv`:
+
+```
+At user_no_bf_ltv = 0.9, the calculated order execution bonus 2.100000000000000387 is capped at 0.1
+```
+
+### Correction: the bonus is not monotonic in LTV
+
+An earlier draft of this report claimed the bonus rises monotonically with LTV,
+so an executor could wait indefinitely. **The test disproves that** and the
+claim has been removed. The interpolation grows with LTV while the
+`1 - no_bf_ltv` cap shrinks, so the curve has an interior maximum:
+
+| LTV | effective bonus |
+|---|---|
+| 70% (trigger) | 10.0% — correctly capped |
+| **72%** | **28.0% — peak** |
+| 74% | 26.0% |
+| 80% | 20.0% |
+| 90% | 10.0% |
+
+The incentive distortion is therefore real but bounded: an executor maximises
+their take by waiting for roughly a 2-point LTV overshoot, yielding **2.8× the
+validated cap** — not by waiting indefinitely.
 
 ## Impact
 
@@ -143,11 +167,11 @@ Two things make this more than a rounding concern:
    (tight buffer, bonus range within the 10% limit) plus ordinary market
    movement is sufficient. The user is given an explicit guarantee at set time
    that execution does not honour.
-2. **The executor controls the timing, and delay pays.** The bonus rises
-   monotonically with LTV past the threshold, so an executor is incentivised
-   *not* to execute promptly and instead let the position deteriorate before
-   taking a super-sized bonus. That inverts the intended incentive, which is to
-   deleverage early.
+2. **The executor controls the timing, and delay pays — up to a point.**
+   Executing at the trigger yields the correct 10%; waiting for a ~2-point LTV
+   overshoot yields 28% (measured). That inverts the intended incentive to
+   deleverage early, though the gain is bounded by the `1 - ltv` cap rather
+   than unbounded.
 
 ## Suggested fix
 
@@ -181,10 +205,25 @@ cargo test -p kamino_lending --lib poc_unclamped_bonus -- --nocapture
 ## Before submitting
 
 - Re-pin to an exact commit (the clone used here was shallow).
-- Confirm `is_obligation_order_execution_enabled()` is true on the deployed
-  lending markets — `check_obligation_order_execution` returns `None` when the
-  feature flag is off, which would make this latent rather than live. This
-  materially affects severity and a triager will check it.
-- The end-to-end demonstration (an actual over-sized collateral seizure on a
-  local validator) is not built here; the unit test proves the bonus
-  computation, not the full liquidation transaction.
+- **Confirm the feature flag on the deployed markets — this decides the
+  severity and I could not check it.** Every Solana RPC endpoint is blocked by
+  this environment's egress policy (`403` on CONNECT from the gateway to
+  `api.mainnet-beta.solana.com`, `solana-rpc.publicnode.com`, `solana.drpc.org`,
+  `rpc.ankr.com`), so the on-chain read was not possible here. Run it yourself:
+
+  ```bash
+  # main Kamino lending market; repeat for any other market in use
+  solana account <LENDING_MARKET_PUBKEY> --url mainnet-beta --output json
+  ```
+
+  and decode `obligation_order_execution_enabled` (a `u8` in `LendingMarket`).
+  If it is `0`, `check_obligation_order_execution` returns `None` and this is
+  latent rather than live — still a valid report, but not funds-at-risk.
+  If it is `1`, the path is live.
+
+- The proof covers the **bonus computation** end to end through the real
+  production function, not a full liquidation transaction on a validator. The
+  remaining step — that `liquidation_bonus_rate` becomes
+  `bonus_multiplier = rate + 1` and scales the seized collateral — is a direct
+  read of `calculate_liquidation_amounts` (`liquidation_operations.rs`) with no
+  further clamp, but it is not exercised by this test.
