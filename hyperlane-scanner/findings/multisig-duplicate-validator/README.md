@@ -111,23 +111,62 @@ has. Two consequences, both demonstrated in `WeightedMultisigDuplicate.PoC.t.sol
 [PASS] test_factoryAcceptsWeightsExceedingTotalWeight()
 ```
 
-## EVM is the sole outlier among all three implementations
+## Cross-VM comparison: two of four implementations are unguarded
 
-Hyperlane ships this ISM on three VMs. Two defend against duplicates; only EVM
-does not:
+Hyperlane ships this ISM on four VMs. Two defend against duplicate validators,
+two do not:
 
 | Implementation | Validator set model | Duplicate possible? |
 |---|---|---|
 | **Sealevel / Solana** | array + explicit `HashSet` uniqueness check in `validate_config` | ❌ rejected at config time, with a comment naming the attack |
 | **CosmWasm** | true set semantics — validators managed individually via `enroll_validator` / `unenroll_validator`; the SDK adapter computes `new Set(config.validators.map(v => v.address))` and diffs | ❌ structurally impossible |
 | **EVM** | `abi.encode(address[], uint8)` blob baked into MetaProxy bytecode | ✅ **accepted at every layer** |
+| **Starknet / Cairo** | `Map<u32, EthAddress>` written positionally by `set_validators` | ✅ **accepted — no dedup** |
 
-This is the strongest form of the argument: it is not a judgement call about
-what *ought* to be validated. Two of the team's own three implementations
-prevent it — one by explicit check, one by data model. The EVM path is the
-outlier, and it is the one carrying the overwhelming majority of deployed
-value (983 `merkleRootMultisigIsm` + 981 `messageIdMultisigIsm` instances in
-the registry).
+This is what makes the finding more than a judgement call about what *ought*
+to be validated: the team's own Solana implementation rejects it explicitly and
+CosmWasm cannot represent it at all, so the guard is clearly considered
+necessary. EVM and Starknet simply lack it. A split like this reads as a
+systemic gap, not a deliberate design decision — the same logical flaw was
+implemented twice without the guard and twice with it.
+
+EVM carries the overwhelming majority of deployed value here: 983
+`merkleRootMultisigIsm` + 981 `messageIdMultisigIsm` instances in the registry.
+
+### Starknet specifics (`hyperlane-xyz/hyperlane-starknet`)
+
+Both Cairo variants —
+`cairo/crates/contracts/src/isms/multisig/messageid_multisig_ism.cairo` and
+`merkleroot_multisig_ism.cairo` — use the identical monotonic cursor:
+
+```cairo
+let is_signer_in_list = loop {
+    if (validator_index == validators.len()) { break false; }
+    let signer = *validators.at(validator_index);
+    if bool_is_eth_signature_valid(digest, signature, signer) { break true; }
+    validator_index += 1;
+};
+assert(is_signer_in_list, Errors::NO_MATCH_FOR_SIGNATURE);
+validator_index += 1;   // cursor never resets
+```
+
+`set_validators` only rejects an empty span and zero addresses — no uniqueness
+check. The whole multisig directory contains no dedup logic (the only
+"already"/"unique" wording is unrelated replay protection in
+`validator_announce.cairo`).
+
+**Aggravating factor on Starknet:** `set_validators` is invoked only from the
+constructor and is not exposed in any public ABI impl (`IValidatorConfiguration`
+exposes getters only). Validators are therefore **immutable after deployment**.
+A duplicate baked in at deploy time cannot be corrected in place — it requires
+redeploying the ISM and repointing every route, or a class upgrade via the
+`UpgradeableComponent`. On EVM the storage variant can at least be fixed with
+`setValidatorsAndThreshold`.
+
+**Scope note:** `hyperlane-starknet` is a *separate repository* from
+`hyperlane-monorepo`. Confirm it is in the Immunefi asset list before including
+it in the submission; if it is not, report the EVM portion and mention Starknet
+only as corroborating context.
 
 ## Could an attacker *engineer* the misconfiguration rather than wait for it?
 
@@ -161,7 +200,8 @@ the nominal M-of-N everywhere.
 engineering / process, not a purely technical exploit, and many Immunefi
 programs treat such findings as out of scope or Low. The defensible claim is
 narrow and true: *the EVM pipeline has no automated defense at any layer, and
-two of the team's own three implementations do defend against it.*
+half of the team's own implementations (Solana, CosmWasm) do defend against it,
+while EVM and Starknet do not.*
 
 ### Ruled out: "just simulate the admin with a script"
 
