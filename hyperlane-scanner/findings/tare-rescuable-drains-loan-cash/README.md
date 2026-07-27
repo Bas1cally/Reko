@@ -1,12 +1,38 @@
-# Tare: `Rescuable.rescueERC20Tokens` has no exclusion for the operating currency, breaking Loans' custody invariant for every open loan
+# Tare: `Rescuable.rescueERC20Tokens` drains the operating currency — INVALIDATED, already a documented known issue
+
+> ## ⛔ DEAD — do not submit. This is the team's own SECURITY.md issue #2, verbatim.
+>
+> Once real repo access was available, `SECURITY.md` (commit baseline `fb12133`) turned out to
+> document this exact defect:
+>
+> > "**2 — `Rescuable.rescueERC20Tokens` can drain the operational currency, breaking core
+> > accounting invariants**... Guardian can move the operational currency out of either contract,
+> > with no on-chain reconciliation to internal accounting... Impact: Guardian compromise (or
+> > honest mistake) of `rescueERC20Tokens` on `Loans` permits arbitrary loss of loan custody funds."
+>
+> Same root cause, same mechanism (`ACC_CASH` desync), same impact framing, independently arrived
+> at from the pasted source alone — which is a good sign the *analysis* was sound, but the finding
+> itself is worthless for submission: Sherlock (like virtually every contest) excludes issues the
+> project has already documented. Root-cause writeup and PoC kept below for the record and because
+> the PoC is still a correct, runnable demonstration of the mechanism — just not a submittable one.
+>
+> **Also invalidated in the same pass**: `SECURITY.md` issue #1 describes a *different*,
+> more severe lock-based theft path via `Loans.investorWithdrawByUnlocker` (a function that exists
+> in the real repo but was never shown to this reviewer) — an address holding `setApprovalForAll`
+> can lock a victim's loan NFT to an attacker-controlled unlocker and drain accrued interest/
+> principal without ever transferring the NFT. This was missed entirely during the earlier
+> `LoansNFT.sol` review (which only considered self-locking as harmless self-inflicted damage) —
+> also already documented, so also not submittable, but worth remembering: the review missed a real
+> attack surface, not just an already-known one.
+>
+> See `../tare-remaining-surface.md` for where to look next.
 
 **Target**: Sherlock contest `tare-io` (`sherlock-scoping/tare-io__tare-contracts`), scope 2,542 nSLOC,
 total rewards 50,000 USDC. Contest window: **20 Jul 2026 17:00 → 29 Jul 2026 17:00 UTC**.
 **File**: `contracts/misc/Rescuable.sol` → `rescueERC20Tokens`, as inherited (unmodified) by `contracts/Loans.sol`.
 **Status**: root cause and PoC both fully verified against pasted source (`Loans.sol`,
-`LoansLedger.sol`, `LoansAuth.sol`, `Rescuable.sol`, `GuardianAccessControl.sol`, `LoansNFT.sol`).
-`PoC.t.sol` in this folder is a complete Foundry test — drop it into `test/` in a local clone and
-run `forge test --match-contract RescuableDrainsLoanCash -vvvv`.
+`LoansLedger.sol`, `LoansAuth.sol`, `Rescuable.sol`, `GuardianAccessControl.sol`, `LoansNFT.sol`) —
+but see the invalidation banner above. Kept for the record only.
 
 ---
 
