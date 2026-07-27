@@ -47,6 +47,20 @@ CommitmentReadIsm via commitment hash). The external-attacker-reachable
 surface offchain is therefore thin — the remaining risk is validator/relayer
 key/RPC compromise, which is opsec, not a code bug.
 
+## Round 5 — deeper seams + fuzzing + cross-VM
+
+| Surface | Verdict |
+|---|---|
+| `MerkleLib.branchRoot` / `reconstructRoot` | Canonical eth2 fixed-depth-32 incremental tree. Fixed-length proof, no variable-length ambiguity, preimage-resistant leaves. Sound. |
+| `TokenBridgeOft` (LayerZero OFT adapter, new, cross-protocol) | Thin wrapper; fee inversion rounds up (protocol-favor), no token retention, native excess refunded to caller. No value leak. |
+| `EverclearTokenBridge` / `EverclearEthBridge` (deprecated) | Intent settlement + replay guard; Eth variant correctly binds intent recipient/amount to the message and delivers via router (no double-spend with Everclear fill). |
+| `WHypERC4626` (rebasing wrapper) | Correct share-based wrapping; both roundings favor the contract; yield appreciation is intended. No drain. |
+| `AggregationIsmMetadata` parsing | Attacker controls metadata anyway; range-aliasing grants no new power; calldata slicing reverts on OOB. Sound. |
+| Tron `Create2` override (0x41 prefix) | Consistent for deploy + compute on-chain; cross-chain view documented EVM-only. ICA isolation holds. |
+| **Fuzz: CrossCollateralRouter value conservation** | 20,000 randomized runs (amount, decimals, both scales) on the same-chain cross-token path. Invariant "recipient canonical ≤ sender canonical" **holds** — no value minted from rounding. (`fuzz/CCR_Conservation_Fuzz.t.sol`) |
+| **Sealevel (Solana) multisig ISM** — `multisig.rs` verify | Same monotonic-index two-pointer algo as EVM; `signatures.len() >= threshold` guard prevents OOB; duplicates can't double-count. Sound. |
+| **Sealevel multisig ISM — account validation** (`validators_and_threshold`) | Correct: owner check (`owner == program_id`) **plus** PDA re-derivation (`key == create_program_address(seeds(origin, bump), program_id)`). No account-substitution / fake-config attack. |
+
 ## Not yet reviewed (candidate next steps, honest gaps)
 
 - `CheckpointFraudProofs` / `AttributeCheckpointFraud` (fraud-proof math).
