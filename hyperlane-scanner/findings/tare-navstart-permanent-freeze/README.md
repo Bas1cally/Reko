@@ -338,10 +338,23 @@ Sweep cost measured against a verbatim copy of `updateNav`, with per-loan reads 
 | 1,000 | 4,389,023 | 4,389 | 4,235 |
 | 2,000 | 8,654,258 | 4,327 | 4,265 |
 
-Fitting: `gas ≈ 162,815 + 4,265·n`. Single-transaction ceiling → **~2,310 loans at 10M gas**,
-~3,470 at 15M, ~6,930 at a full 30M block. Above that the manager *must* paginate, which is the
-precondition. The harness understates the real cost — the real path also materialises a 5-field
-`LoanValue[]` across an external call — so the true threshold sits lower.
+Fitting: `gas ≈ 162,815 + 4,265·n`. **Deployment is Avalanche C-Chain, block gas limit 15,000,000**
+(Cortina, March 2023; ACP-176/Octane makes it validator-adjustable but that is the baseline) — half
+of Ethereum's 30M. Concrete ceilings:
+
+| transaction size | max loans in one sweep |
+|---|---|
+| 15M — a whole C-Chain block | 3,478 |
+| 10M — a very large transaction | 2,306 |
+| 7.5M — half a block | 1,720 |
+
+So the manager must paginate above roughly **1,700–2,300 loans**, which is the precondition. The
+harness understates the real cost — the real path also materialises a 5-field `LoanValue[]` across
+an external call — so the true threshold sits lower.
+
+The C-Chain also targets 15M gas per 10-second rolling window, so a manager burning a full block on
+a sweep that then gets discarded is spending the chain's entire throughput target for that window to
+make zero progress.
 
 Note the marginal cost *rises* (4,211 → 4,265) while the average falls: `new uint64[](batchSize)` is
 allocated up front, so memory expansion is quadratic. Trying to finish in one big call is penalised.

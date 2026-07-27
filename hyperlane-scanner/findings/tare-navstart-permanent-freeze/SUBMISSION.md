@@ -66,10 +66,22 @@ cycle open holds the entire vault closed.
    `pendingNav`, `maxNavComputationTime`) exists to serve. **Measured threshold** (harness, verbatim
    `updateNav`, per-loan reads matching `getLoanValues`): a sweep costs `162,815 + ~4,265 × n` gas, so
    `_navLoanIds.length` needs to be **above ~2,300 loans** for a single 10M-gas transaction to be
-   impossible. Two factors push the real threshold **lower** than that figure: the real path also
-   materialises a 5-field `LoanValue[]` across an external call, and the deployment target is
-   **Avalanche C-Chain**, whose block gas limit is materially below Ethereum's — every value under
-   30M moves the threshold down.
+   impossible. **The deployment target is Avalanche C-Chain, whose block gas limit is 15,000,000** —
+   half of Ethereum's — so the concrete ceilings are:
+
+   | transaction size | max loans in one sweep |
+   |---|---|
+   | 15M — an entire C-Chain block, nothing else in it | **3,478** |
+   | 10M — already a very large transaction | **2,306** |
+   | 7.5M — half a block | **1,720** |
+
+   Above roughly **1,700–2,300 loans** the manager must paginate, and pagination is the precondition.
+   The true figure is lower still: the real path additionally materialises a 5-field `LoanValue[]`
+   across an external call, which this harness does not model.
+
+   Note also that the C-Chain targets 15,000,000 gas per 10-second rolling window. A manager burning
+   a full block on a sweep that is then discarded is consuming the chain's entire throughput target
+   for that window, repeatedly, to make no progress.
 2. `PORTFOLIO_MANAGER` or `INVESTOR_MANAGER` needs to call `updateNav()` to set `navStart` to go from
    `0` to non-zero — this happens on every routine NAV refresh and is required before any deposit or
    redemption can be approved.
