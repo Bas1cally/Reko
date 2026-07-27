@@ -1,191 +1,282 @@
-# Starknet FastTokenRouter is non-functional: every fast-transfer settlement reverts, stranding the liquidity provider's funds
-
-*Three independent defects on the same ~20 lines. Defect 1 was found first and
-is described first; defects 2 and 3 were found while chasing it and are what
-actually fires at runtime. Read the "Combined effect" table for the runtime
-behaviour.*
+# Starknet FastTokenRouter: every fast-transfer settlement reverts permanently, stranding the liquidity provider's capital
 
 **Target**: `hyperlane-xyz/hyperlane-starknet`
-`cairo/crates/token/src/components/fast_token_router.cairo` → `_get_token_recipient`
+**Component**: `cairo/crates/token/src/components/fast_token_router.cairo`
+(reached via `extensions/fast_hyp_erc20.cairo`, `extensions/fast_hyp_erc20_collateral.cairo`)
+**Reviewed at**: HEAD of `main` at review time — shallow clone, so **re-pin to an exact commit before submitting**
+**Requires misconfiguration, privileged access, or an attacker?** **No.** Broken on the first normal use of the feature.
 
-**Reviewed commit**: HEAD of `main` at time of review (shallow clone; re-pin before submitting)
-**Severity**: **Logic bug causing direct loss of funds — but in code that is compiled and shipped yet, as far as I can verify, not deployed anywhere.** See "Reachability" before choosing a severity in the submission.
-**Requires misconfiguration?** **No.** This is broken by default for anyone using the feature as designed.
+---
 
-## The bug
+## Summary
 
-`FastTokenRouterComponent` implements "fast transfers": a liquidity provider
-(the *filler*) fronts tokens to the recipient immediately via
-`fill_fast_transfer`, and is later reimbursed when the real Hyperlane settlement
-message arrives. The filler's identity is recorded here:
+`FastTokenRouterComponent` implements fast transfers: a liquidity provider (the
+*filler*) fronts tokens to the recipient immediately, and is reimbursed later
+when the real Hyperlane settlement message arrives.
+
+Three defects on the settlement path — all within ~20 lines — make that
+reimbursement impossible:
+
+| # | Defect | Location | Effect |
+|---|---|---|---|
+| **A** | Metadata `Bytes` declared as **4** bytes instead of **64** | `_fast_transfer_from_sender` | `concat` truncates the payload to 4 bytes; fee and transfer-id are silently dropped |
+| **B** | Second `read_u256` at byte offset **2** instead of **32** | `_get_token_recipient` | Would read overlapping bytes even if A were fixed |
+| **C** | Returns the storage **key** instead of reading the filler map | `_get_token_recipient` | Pays a keccak hash cast to an address instead of the filler |
+
+At runtime **A** fires first and panics, so 100% of fast-transfer settlement
+messages revert — deterministically and permanently. **B** and **C** are latent
+behind it and become the active failure once A is fixed.
+
+`fill_fast_transfer` has already moved the filler's tokens out and paid the
+recipient *before* the settlement arrives, so the settlement is the filler's
+only reimbursement path — and it can never execute.
+
+The component has **zero test coverage**, which is why none of the three was
+caught.
+
+---
+
+## Background: the intended flow
 
 ```cairo
-// fill_fast_transfer
-let filled_fast_transfer_key = self
-    ._get_fast_transfers_key(origin, fast_transfer_id, amount, fast_fee, recipient);
-...
-let caller = starknet::get_caller_address();
-self.filled_fast_transfers.write(filled_fast_transfer_key, caller);   // filler stored
+// Origin chain — user initiates
+fast_transfer_remote(destination, recipient, amount, fast_fee, value)
+  └─ _fast_transfer_from_sender(amount, fast_fee, fast_transfer_id)
+       ├─ pulls `amount` from the sender
+       └─ returns metadata = (fast_fee, fast_transfer_id)      // ← defect A
+
+// Destination chain — filler fronts liquidity immediately
+fill_fast_transfer(recipient, amount, fast_fee, origin, fast_transfer_id)
+  ├─ key = _get_fast_transfers_key(origin, id, amount, fee, recipient)
+  ├─ filled_fast_transfers.write(key, caller)                   // filler recorded
+  ├─ pulls (amount - fast_fee) from the filler
+  └─ pays (amount - fast_fee) to the recipient
+
+// Destination chain — settlement message arrives, should repay the filler
+Mailbox::process → RouterComponent::handle → _handle → _transfer_to
+  └─ _get_token_recipient(recipient, amount, origin, metadata)  // ← defects B, C
+       └─ should return the filler; pays them `amount`
 ```
 
-On settlement, `_get_token_recipient` is supposed to look that filler up and pay
-them instead of the original recipient. It does not:
+The filler's capital is at risk for exactly the window between
+`fill_fast_transfer` and settlement. If settlement never executes, that capital
+is simply gone.
+
+---
+
+## Defect A — metadata length is a limb count, not a byte length
 
 ```cairo
-fn _get_token_recipient(...) -> u256 {
-    if metadata.size() == 0 {
-        return recipient;
-    }
-
-    let (_, fast_fee) = metadata.read_u256(0);
-    let (_, fast_transfer_id) = metadata.read_u256(2);
-
-    let filler_address = self
-        ._get_fast_transfers_key(origin, fast_transfer_id, amount, fast_fee, recipient);
-    if filler_address != 0 {
-        return filler_address;      // <-- returns the KEY, not the stored filler
-    }
-
-    recipient
-}
-```
-
-`_get_fast_transfers_key` returns `data.keccak()` — a `u256` **hash used as the
-storage map key**. The variable is named `filler_address`, but no map read ever
-happens. The missing line is the lookup itself:
-
-```cairo
-let key = self._get_fast_transfers_key(origin, fast_transfer_id, amount, fast_fee, recipient);
-let filler_address = self.filled_fast_transfers.read(key);   // <-- absent
-```
-
-Confirmation that the map is never read on this path — `filled_fast_transfers`
-occurs exactly three times in the entire repository:
-
-| Line | Use |
-|---|---|
-| 45 | declaration (`Map<u256, ContractAddress>`) |
-| 136 | duplicate-fill guard inside `fill_fast_transfer` |
-| 142 | write of the filler address |
-
-There is **no read** in the settlement path.
-
-## Defect 2: the metadata is encoded with the wrong length, and read at the wrong offsets
-
-Chasing the same ~20 lines turned up two further defects, both verified against
-the `alexandria_bytes` 0.4.0 source. **They fire before defect 1 is even
-reached.**
-
-`_fast_transfer_from_sender` builds the metadata like this:
-
-```cairo
+// _fast_transfer_from_sender
 BytesTrait::new(
     4, array![fast_fee.low, fast_fee.high, fast_transfer_id.low, fast_transfer_id.high],
 )
 ```
 
-In `alexandria_bytes`, `Bytes { size, data }` stores `size` as a **byte** length
-and `data` as 16-byte limbs (`BYTES_PER_ELEMENT = 16`):
+In `alexandria_bytes` 0.4.0, `Bytes { size, data }` stores `size` as a **byte**
+length while `data` holds 16-byte limbs (`BYTES_PER_ELEMENT = 16`):
 
 ```cairo
 fn new(size: usize, data: Array<u128>) -> Bytes {
     let min_len = (size + BYTES_PER_ELEMENT - 1) / BYTES_PER_ELEMENT;
-    assert(data.len() >= min_len, 'Insufficient data');   // only guards *too little* data
+    assert(data.len() >= min_len, 'Insufficient data');   // guards too LITTLE data only
     Bytes { size, data }
 }
 ```
 
-Two u256 values are **64 bytes**, so the size should be `64`. Passing `4` looks
-like a limb/element count was used instead. The constructor does not catch it —
-its assert only rejects *insufficient* data (`4 >= 1` passes), never excess.
+Two `u256` values are **64 bytes**, so the size must be `64`. The literal `4`
+matches the *number of limbs*, not the byte length.
 
-The same confusion appears on the read side:
+The constructor cannot catch this: its only assert rejects *insufficient* data
+(`4 >= 1` passes) and never checks for excess. The `Bytes` is created claiming
+4 bytes while carrying 64 bytes of payload.
+
+The damage is done by `concat`, which copies exactly `other.size` bytes:
 
 ```cairo
+fn concat(ref self: Bytes, other: @Bytes) {
+    let mut sub_bytes_full_array_len = *other.size / BYTES_PER_ELEMENT;   // 4/16 = 0
+    ...
+    let sub_bytes_last_element_size = *other.size % BYTES_PER_ELEMENT;    // 4
+```
+
+So `TokenMessageTrait::format` appends **4 of the 64 bytes**. `fast_fee` and
+`fast_transfer_id` are truncated away before the message ever leaves the origin
+chain.
+
+---
+
+## Defect B — read offset is an element index, not a byte offset
+
+```cairo
+// _get_token_recipient
 let (_, fast_fee)         = metadata.read_u256(0);
 let (_, fast_transfer_id) = metadata.read_u256(2);   // should be 32
 ```
 
-`read_u256` offsets are byte offsets. The repo's own working code proves it —
-`token_message.cairo` reads consecutive u256 fields at **0, 32, 64**. Offset `2`
-would read bytes 2..34, overlapping the first value by 30 bytes.
+`read_u256` takes byte offsets. The repository's own working code is the
+reference — `token_message.cairo` reads consecutive `u256` fields at **0, 32,
+64**:
 
-### Combined effect: every fast-transfer settlement reverts, deterministically
+```cairo
+fn recipient(self: @Bytes) -> u256 { let (_, r) = self.read_u256(0);  r }
+fn amount(self: @Bytes)    -> u256 { let (_, a) = self.read_u256(32); a }
+fn metadata(self: @Bytes)  -> Bytes { let (_, b) = self.read_bytes(64, self.size() - 64); b }
+```
+
+Offset `2` reads bytes 2..34 — overlapping the first value by 30 bytes and
+straddling into the second. Same limb-index-vs-byte-offset confusion as defect A.
+
+---
+
+## Defect C — the filler map is written but never read
+
+```cairo
+fn _get_token_recipient(...) -> u256 {
+    if metadata.size() == 0 { return recipient; }
+
+    let (_, fast_fee)         = metadata.read_u256(0);
+    let (_, fast_transfer_id) = metadata.read_u256(2);
+
+    let filler_address = self
+        ._get_fast_transfers_key(origin, fast_transfer_id, amount, fast_fee, recipient);
+    if filler_address != 0 {
+        return filler_address;      // ← returns the KEY, not the stored filler
+    }
+    recipient
+}
+```
+
+`_get_fast_transfers_key` returns `data.keccak()` — the `u256` used as the
+**storage map key**. The variable is named `filler_address`, but no map read
+occurs. The missing line:
+
+```cairo
+let key = self._get_fast_transfers_key(origin, fast_transfer_id, amount, fast_fee, recipient);
+let filler = self.filled_fast_transfers.read(key);   // ← absent
+```
+
+`filled_fast_transfers` appears exactly three times in the entire repository:
+
+| Line | Use |
+|---|---|
+| 45 | declaration — `Map<u256, ContractAddress>` |
+| 136 | duplicate-fill guard inside `fill_fast_transfer` |
+| 142 | write of the filler's address |
+
+There is **no read on the settlement path**. The value the guard checks
+(`filler_address != 0`) is a keccak hash, which is non-zero with overwhelming
+probability, so the early-return always triggers.
+
+---
+
+## Runtime behaviour: deterministic, permanent revert
 
 | # | Step | Result |
 |---|---|---|
-| 1 | `BytesTrait::new(4, [4 limbs])` | Bytes declares 4 bytes, carries 64. Constructed silently. |
-| 2 | `TokenMessageTrait::format` → `bytes.concat(@metadata)` | `concat` copies exactly `other.size` bytes → **only 4 of 64 bytes** are appended; `fast_fee` and `fast_transfer_id` are truncated away. |
-| 3 | Message layout | 32 (recipient) + 32 (amount) + 4 (metadata) = 68 bytes |
-| 4 | Destination: `message.metadata()` = `read_bytes(64, size-64)` | a 4-byte `Bytes` |
-| 5 | `_get_token_recipient`: `metadata.size() == 4`, so `!= 0` → proceeds | |
+| 1 | `BytesTrait::new(4, [4 limbs])` | declares 4 bytes, carries 64 — constructed silently |
+| 2 | `format` → `concat(@metadata)` | copies `other.size` = **4 of 64 bytes**; fee and id truncated |
+| 3 | Message layout | 32 (recipient) + 32 (amount) + 4 (metadata) = **68 bytes** |
+| 4 | Destination: `message.metadata()` = `read_bytes(64, 68-64)` | a **4-byte** `Bytes` |
+| 5 | `_get_token_recipient`: `metadata.size() == 4`, so `!= 0` | proceeds past the early return |
 | 6 | `metadata.read_u256(0)` → `assert(0 + 32 <= 4, 'out of bound')` | **PANIC** |
 
-So `Mailbox::process` reverts on **100%** of fast-transfer settlement messages —
-not probabilistically, and not recoverably: the message content is fixed, so
-every retry reverts identically. The settlement is **permanently undeliverable**.
+`read_u256` carries an explicit bounds assert:
 
-This supersedes an earlier estimate in this report that framed the failure as a
-~98%/~2% split on the `u256 → ContractAddress` conversion. That conversion is
-never reached; the metadata read panics first. Defect 1 (returning the hash key
-instead of the filler) is therefore **latent** — it becomes the active failure
-only once the encoding is fixed.
+```cairo
+fn read_u256(self: @Bytes, offset: usize) -> (usize, u256) {
+    assert(offset + 32 <= self.size(), 'out of bound');
+    ...
+}
+```
+
+So `Mailbox::process` reverts on **every** fast-transfer settlement. The message
+content is fixed, so every retry reverts identically — the message is
+**permanently undeliverable**, not merely delayed.
+
+Defect C never executes today because the panic in step 6 precedes it. Fixing
+only the encoding (A + B) would surface C as the next failure: the payout would
+then target a keccak hash cast to an address, which either fails
+`u256 → felt252 → ContractAddress` conversion (panic) or lands on an address
+nobody controls (tokens burned). **All three must be fixed together.**
+
+---
 
 ## Impact
 
-`fill_fast_transfer` has already moved the filler's tokens out
-(`fast_receive_from_hook`) and paid the recipient (`fast_transfer_to_hook`)
-*before* the settlement message arrives. The settlement is the filler's only
-reimbursement path, and it can never execute.
+The filler's capital is unrecoverable. `fill_fast_transfer` has already:
 
-Result: **the liquidity provider's capital is unrecoverable**, and the
-origin-side collateral backing the transfer is stranded behind an
-undeliverable message. This affects every fast transfer, not an edge case —
-`fast_transfer_remote` always attaches metadata, so step 5 above always
-proceeds into the panic.
+- pulled `amount - fast_fee` from the filler (`fast_receive_from_hook`), and
+- paid `amount - fast_fee` to the recipient (`fast_transfer_to_hook`)
 
-Three independent defects sit in the same ~20 lines:
+before the settlement message exists. Settlement is the only path that repays
+the filler, and it can never execute. The origin-side collateral backing the
+transfer is simultaneously stranded behind an undeliverable message.
 
-1. `_get_token_recipient` returns the storage **key** instead of reading
-   `filled_fast_transfers` (latent behind #2/#3).
-2. Metadata `Bytes` declared as 4 bytes instead of 64 → payload truncated by
-   `concat`.
-3. Second `read_u256` offset `2` instead of `32`.
+This is not an edge case: `fast_transfer_remote` always attaches metadata, so
+step 5 always proceeds into the panic. Every fast transfer on such a route
+behaves identically.
 
-None is caught by a test, because the component has none.
+---
 
-## Reachability — read this before assigning severity
+## Reachability — read before assigning severity
 
-Verified as best I can from public sources; **re-check before submitting**:
+Verified from public sources; **re-check before submitting**, as this may change:
 
-- **Compiled and shipped:** `fast_token_router`, `fast_hyp_erc20` and
+- **Compiled and shipped.** `fast_token_router`, `fast_hyp_erc20` and
   `fast_hyp_erc20_collateral` are all declared in
-  `cairo/crates/token/src/lib.cairo`, so they are part of the built token crate,
-  not dead files excluded from the build.
-- **No deployment found:** no warp route in `hyperlane-registry` references any
+  `cairo/crates/token/src/lib.cairo` — part of the built token crate, not dead
+  files excluded from the build.
+- **No deployment found.** No warp route in `hyperlane-registry` references any
   fast variant (`grep -rli "fasthyp\|fast_hyp\|fastTransfer" deployments/` →
-  no matches). The monorepo's `starknet/artifacts` contains no fast contract.
-- **Zero test coverage:** no test file in the Cairo crates references
-  `fast_transfer` or `FastHyp`. Nothing would have caught this.
+  no matches), and the monorepo's `starknet/artifacts` contains no fast contract.
+- **Zero test coverage.** No test in the Cairo crates references
+  `fast_transfer` or `FastHyp`.
 
-So: no funds are at risk *today*. The honest framing is **"a shipped,
-deployable contract that loses the liquidity provider's funds on the first real
-use"** — not an active exploit.
+**No funds are at risk today.** The accurate framing is *"a shipped, deployable
+contract that loses the liquidity provider's funds on first real use"* — not an
+active exploit. Do not lead with a Critical claim.
 
 **Scope caveat:** `hyperlane-starknet` is a **separate repository** from
-`hyperlane-monorepo`. Confirm it appears in the Immunefi asset list. Many
-programs scope only deployed mainnet contracts for smart-contract severities; an
-undeployed contract in a side repo may be triaged as Low/Informational or
-rejected outright. Do not lead with a Critical claim.
+`hyperlane-monorepo`. Confirm it appears in the Immunefi asset list before
+submitting. Many programs scope only deployed mainnet contracts for
+smart-contract severities, so an undeployed contract in a side repo may be
+triaged as Low/Informational or rejected on scope alone.
 
-What makes it worth submitting anyway, and stronger than a config-hardening
-report: it needs **no misconfiguration, no privileged access, and no attacker**.
-Anyone using the feature exactly as intended loses money on the first
-settlement. That is a defect in the code itself.
+What still makes it worth submitting: it requires **no misconfiguration, no
+privileged access, and no attacker**. This is a defect in the code itself, not a
+hardening opinion — which is a materially stronger position than a
+configuration-dependent report.
+
+---
 
 ## Suggested fix
 
-One line — read the map that `fill_fast_transfer` already writes:
+**A — encode the true byte length** (`_fast_transfer_from_sender`):
+
+```cairo
+BytesTrait::new(
+    64, array![fast_fee.low, fast_fee.high, fast_transfer_id.low, fast_transfer_id.high],
+)
+```
+
+Better still, mirror the working path and let the length follow from the writes,
+removing any chance of the mismatch recurring:
+
+```cairo
+let mut metadata = BytesTrait::new_empty();
+metadata.append_u256(fast_fee);
+metadata.append_u256(fast_transfer_id);
+```
+
+**B — use byte offsets** (`_get_token_recipient`):
+
+```cairo
+let (_, fast_fee)         = metadata.read_u256(0);
+let (_, fast_transfer_id) = metadata.read_u256(32);
+```
+
+**C — read the map that `fill_fast_transfer` writes**:
 
 ```cairo
 let key = self
@@ -197,28 +288,35 @@ if filler != starknet::contract_address_const::<0>() {
 recipient
 ```
 
-Note the `!= 0` guard must compare the *stored address* (unset map entries read
-as address 0), which is what the current `filler_address != 0` check was clearly
-intended to do — the check is correct, the value it checks is not.
+The existing `!= 0` guard is correct in intent — unset map entries read as
+address 0. Only the value being checked is wrong.
 
-And the encoding, which must be fixed for the settlement to execute at all:
+**Add tests.** A single round-trip test — `fast_transfer_remote` →
+`fill_fast_transfer` → settlement → assert the filler received the tokens —
+would have caught all three defects at once.
 
-```cairo
-// _fast_transfer_from_sender — 2 x u256 = 64 bytes, not 4
-BytesTrait::new(
-    64, array![fast_fee.low, fast_fee.high, fast_transfer_id.low, fast_transfer_id.high],
-)
+---
 
-// _get_token_recipient — byte offsets, matching token_message.cairo's 0/32/64
-let (_, fast_fee)         = metadata.read_u256(0);
-let (_, fast_transfer_id) = metadata.read_u256(32);
+## How to verify
+
+```bash
+git clone https://github.com/hyperlane-xyz/hyperlane-starknet
+cd hyperlane-starknet
+
+# Defect C: the map is written but never read
+grep -rn "filled_fast_transfers" cairo/crates/
+#   → 3 hits: declaration, dup-guard read, write. No settlement-path read.
+
+# Defects A and B
+sed -n '224,283p' cairo/crates/token/src/components/fast_token_router.cairo
+
+# The working reference for byte offsets, same repo
+cat cairo/crates/token/src/components/token_message.cairo
+
+# No test coverage
+grep -rn "fast_transfer\|FastHyp" cairo/crates/*/tests/ ; echo "exit=$?"
 ```
 
-Cleanest would be to mirror the working path and use
-`BytesTrait::new_empty()` + `append_u256(...)`, which makes the length
-self-consistent by construction and removes the chance of a size/limb mismatch
-recurring.
-
-**Add tests.** The component has none. A single round-trip test —
-`fast_transfer_remote` → `fill_fast_transfer` → settlement → assert the filler
-received `amount - fast_fee` — would have caught all three defects at once.
+Library semantics referenced above are from `alexandria_bytes` 0.4.0
+(`packages/bytes/src/bytes.cairo`): `new`, `concat`, `read_u256`,
+`BYTES_PER_ELEMENT`.
