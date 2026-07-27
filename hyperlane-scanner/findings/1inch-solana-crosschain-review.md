@@ -78,3 +78,30 @@ substitution, unchecked ATAs, silent overflow) are all covered.
 If a bug exists here it is more likely in cross-program economics — the
 unfinished safety-deposit sizing, or an interaction between the auction and
 partial fills — than in a single missing check.
+
+---
+
+## Addendum — `1inch/solana-fusion` (short pass)
+
+Also in scope, ~1.1k lines. Checked and sound:
+
+- Every order field that matters (`src_mint`, `dst_mint`, `maker_receiver`,
+  `protocol_dst_acc`, `integrator_dst_acc`, fees, amounts) is hashed into
+  `order_hash`, which is an escrow **PDA seed** — so a taker cannot alter any
+  of them without breaking PDA derivation.
+- `maker_dst_ata` is bound via `associated_token::authority = maker_receiver`,
+  `taker_dst_ata` via `= taker`. Fees can only reach the accounts the maker
+  committed to at creation.
+- `create` validates `surplus_percentage <= BASE_1E2`, so the surplus fee
+  cannot exceed the surplus; `estimated_dst_amount >= min_dst_amount`; and the
+  fee-account presence flags are consistent with non-zero fees.
+- `get_dst_amount` uses `mul_div_ceil` in both the proportional and the
+  rate-bump step — rounds toward the maker.
+- `overflow-checks = true`, so the one unchecked subtraction in
+  `get_fee_amounts` (`dst_amount - integrator_fee_amount - protocol_fee_amount`)
+  panics rather than wrapping, and it is unreachable anyway given the
+  `surplus_percentage` bound.
+
+*Minor, not exploitable:* `taker_src_ata` is constrained only on `mint`, not on
+owner — the taker may direct their own proceeds anywhere, which harms only
+themselves.
