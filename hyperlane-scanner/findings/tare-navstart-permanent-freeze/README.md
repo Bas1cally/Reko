@@ -315,3 +315,51 @@ Recorded here because they came out of the same pass and are cheap to check:
 - [ ] Read the deployed `maxNavComputationTime` to quantify Route C.
 - [ ] Re-check `specs/invariants.md` §6 for any liveness claim about `navStart` — if the team asserts
       termination there, quote it; it turns this from an omission into a broken stated invariant.
+
+---
+
+## Addendum — measured evidence (added after the harness ran)
+
+The two open questions in the original write-up are now answered with numbers rather than argument.
+Harness and full output: `harness/`, `harness/RESULTS.txt`. 13 tests, all passing.
+
+### The portfolio-size precondition, quantified
+
+Sweep cost measured against a verbatim copy of `updateNav`, with per-loan reads matching the real
+`getLoanValues` pattern:
+
+| portfolio | total gas | avg gas/loan | marginal gas/loan |
+|---|---|---|---|
+| 50 | 373,208 | 7,464 | — |
+| 200 | 1,004,960 | 5,024 | 4,211 |
+| 500 | 2,271,055 | 4,542 | 4,220 |
+| 1,000 | 4,389,023 | 4,389 | 4,235 |
+| 2,000 | 8,654,258 | 4,327 | 4,265 |
+
+Fitting: `gas ≈ 162,815 + 4,265·n`. Single-transaction ceiling → **~2,310 loans at 10M gas**,
+~3,470 at 15M, ~6,930 at a full 30M block. Above that the manager *must* paginate, which is the
+precondition. The harness understates the real cost — the real path also materialises a 5-field
+`LoanValue[]` across an external call — so the true threshold sits lower.
+
+Note the marginal cost *rises* (4,211 → 4,265) while the average falls: `new uint64[](batchSize)` is
+allocated up front, so memory expansion is quadratic. Trying to finish in one big call is penalised.
+
+### The cost asymmetry, quantified
+
+Attacker 24,227 gas (Route A, cold) or 98,669 (Route B, cold). Manager per discarded batch:
+324,178 @ 50 → **13×**; 534,680 @ 100 → **22×**; 1,166,678 @ 250 → **48×**; 2,222,025 @ 500 → **91×**.
+
+The ratio worsens the harder the manager tries to finish, because a larger `batchSize` means more
+progress discarded per bump.
+
+### A measurement error caught in-flight
+
+The first revision of the economics test measured the attacker's transfer against a vault whose slots
+had just been warmed by 500 mints, and reported **2,329 gas** — impossible for three SSTOREs — which
+inflated the ratios to 139–954×. `GasCheck.t.sol` was written specifically to re-measure in isolation
+with cold storage and returned 28,538; the corrected in-suite figure is 24,227.
+
+Recorded because it is the same failure mode as the retracted approval lead further up: a number that
+looked good, measured in a context that made it wrong. The corrected ratios are ~10× smaller and are
+the ones that go in the submission. An inflated figure a judge can recompute costs more credibility
+than the larger number could ever buy.

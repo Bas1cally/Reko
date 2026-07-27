@@ -1,0 +1,116 @@
+Compiling 1 files with Solc 0.8.33
+Solc 0.8.33 finished in 1.06s
+Compiler run successful!
+
+Ran 3 tests for test/GasCheck.t.sol:GasCheckTest
+[PASS] test_routeA_transferGas() (gas: 153649)
+Logs:
+  Route A transferFrom, measured gas: 28538
+
+[PASS] test_routeB_createGas() (gas: 126488)
+Logs:
+  Route B create, measured gas: 114688
+
+[PASS] test_theBumpIsWhatMatters() (gas: 153178)
+Logs:
+  vault ownershipNonce before: 0
+  vault ownershipNonce after : 1
+
+Suite result: ok. 3 passed; 0 failed; 0 skipped; finished in 1.05ms (542.93µs CPU time)
+
+Ran 7 tests for test/NavFreeze.t.sol:NavFreezeTest
+[PASS] test_attackerHoldsNavStartOpenIndefinitely() (gas: 2866348)
+Logs:
+  rounds run                     20
+  batches a clean sweep needs    4
+  furthest cursor ever reached   10
+  total gas burned by manager    1951103
+  total gas spent by attacker    1551160
+  cost ratio (manager/attacker)  1
+
+[PASS] test_boundary_singleTransactionSweepIsImmune() (gas: 869180)
+[PASS] test_control_sweepCompletesWithoutInterference() (gas: 746102)
+[PASS] test_everyPrivilegedPathIsGatedBehindTheStuckFlag() (gas: 423443)
+[PASS] test_gas_derivePortfolioSizeThreshold() (gas: 9521122)
+Logs:
+  gas: sweep of 10 loans         204895
+  gas: sweep of 40 loans         331149
+  gas: marginal cost per loan    4208
+  gas: fixed overhead per call   162815
+  max loans in one tx @30M limit 7090
+  max loans in one tx @45M limit 10655
+  -> multi-batch (attackable) above this many loans
+
+[PASS] test_noAdminLeverClearsNavStart() (gas: 282788)
+[PASS] test_routeA_plainTransferByAnyNftHolder() (gas: 463210)
+Suite result: ok. 7 passed; 0 failed; 0 skipped; finished in 14.88ms (12.36ms CPU time)
+
+Ran 3 tests for test/Economics.t.sol:EconomicsTest
+[PASS] test_A_perLoanCostIsSuperlinear() (gas: 432784982)
+Logs:
+  --- sweep cost vs portfolio size (single-transaction sweep) ---
+  loans: 50
+     total gas: 373208
+     gas/loan : 7464
+  loans: 200
+     total gas: 1004960
+     gas/loan : 5024
+     marginal gas/loan over previous step: 4211
+  loans: 500
+     total gas: 2271055
+     gas/loan : 4542
+     marginal gas/loan over previous step: 4220
+  loans: 1000
+     total gas: 4389023
+     gas/loan : 4389
+     marginal gas/loan over previous step: 4235
+  loans: 2000
+     total gas: 8654258
+     gas/loan : 4327
+     marginal gas/loan over previous step: 4265
+  
+  Average gas/loan FALLS as the fixed per-call overhead amortises, but
+  MARGINAL gas/loan RISES with n -- updateNav allocates new
+  uint64[](batchSize) up front, so memory expansion is quadratic. The
+  rise is mild in this harness because only a uint64[] is allocated; the
+  real path also materialises a 5-field LoanValue[] across an external
+  call, so the real curve bends harder than the one measured here.
+
+[PASS] test_B_realisticSingleTxCeiling() (gas: 227597809)
+Logs:
+  --- how many loans fit in one transaction ---
+  measured: 2000-loan sweep costs 8654258
+    loans per 10M gas (large tx) : 2311
+    loans per 15M gas (half block): 3466
+    loans per 30M gas (whole block): 6933
+  
+  Above the 10M figure the manager MUST paginate, which is the
+  precondition for the freeze. This harness understates the real cost:
+  the real getLoanValues returns a 5-field LoanValue[] across an
+  external call, so the real threshold is lower than measured here.
+
+[PASS] test_C_attackerVsDefenderCost() (gas: 449637361)
+Logs:
+  --- cost asymmetry per round ---
+  attacker cost, Route A (transferFrom): 24227
+  attacker cost, Route B (create)      : 98669
+  defender cost, batchSize 50
+     gas burned and discarded: 324178
+     ratio vs Route A        : 13
+  defender cost, batchSize 100
+     gas burned and discarded: 534680
+     ratio vs Route A        : 22
+  defender cost, batchSize 250
+     gas burned and discarded: 1166678
+     ratio vs Route A        : 48
+  defender cost, batchSize 500
+     gas burned and discarded: 2222025
+     ratio vs Route A        : 91
+  
+  Every round the attacker pays once and the manager pays for a whole
+  batch that is then thrown away. The larger the batch the manager
+  chooses -- i.e. the harder they try to finish -- the worse the ratio.
+
+Suite result: ok. 3 passed; 0 failed; 0 skipped; finished in 188.53ms (413.75ms CPU time)
+
+Ran 3 test suites in 190.24ms (204.46ms CPU time): 13 tests passed, 0 failed, 0 skipped (13 total tests)

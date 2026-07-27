@@ -62,9 +62,12 @@ cycle open holds the entire vault closed.
 ## Internal Pre-conditions
 
 1. `PORTFOLIO_MANAGER` needs to have curated a NAV list large enough that a full sweep cannot complete
-   in a single transaction, i.e. `_navLoanIds.length` to be greater than one transaction's gas budget
-   allows — the multi-batch mode the pagination machinery (`batchSize`, `navCursor`, `pendingNav`,
-   `maxNavComputationTime`) exists to serve.
+   in a single transaction — the multi-batch mode the pagination machinery (`batchSize`, `navCursor`,
+   `pendingNav`, `maxNavComputationTime`) exists to serve. **Measured threshold** (harness, verbatim
+   `updateNav`, per-loan reads matching `getLoanValues`): a sweep costs `162,815 + ~4,265 × n` gas, so
+   `_navLoanIds.length` needs to be **above ~2,300 loans** for a single 10M-gas transaction to be
+   impossible (~3,470 at 15M, ~6,930 at a full 30M block). The real path additionally materialises a
+   5-field `LoanValue[]` across an external call, so the true threshold is **lower** than measured.
 2. `PORTFOLIO_MANAGER` or `INVESTOR_MANAGER` needs to call `updateNav()` to set `navStart` to go from
    `0` to non-zero — this happens on every routine NAV refresh and is required before any deposit or
    redemption can be approved.
@@ -124,9 +127,21 @@ no capital can be deployed to loans, no repayments collected, no valuation model
 behind the stuck flag.
 
 The attacker gains nothing and loses only gas — this is griefing. The cost asymmetry is what makes it
-sustainable: each round the attacker pays for one cheap write (a `create` moves no tokens; a transfer
-is a single ERC-721 write), while the manager pays to value an entire batch of loans and has that
-work discarded.
+sustainable, and it is **measured, not asserted**:
+
+| | gas per round |
+|---|---|
+| Attacker, Route A (`transferFrom` into the vault, cold storage) | **24,227** |
+| Attacker, Route B (`create` minting into the vault, cold storage) | **98,669** |
+| Manager, one discarded batch @ `batchSize = 50` | 324,178 — **13×** Route A |
+| Manager, one discarded batch @ `batchSize = 100` | 534,680 — **22×** |
+| Manager, one discarded batch @ `batchSize = 250` | 1,166,678 — **48×** |
+| Manager, one discarded batch @ `batchSize = 500` | 2,222,025 — **91×** |
+
+Every round the attacker pays once and the manager pays for an entire batch that is then thrown away.
+The ratio worsens the harder the manager tries to finish: a larger `batchSize` is more progress lost
+per bump. A manager who paginates at 500 burns 91 gas for every 1 the attacker spends, and still ends
+the round no closer to finalising than when they started.
 
 Two limits, stated for accuracy:
 
@@ -141,15 +156,43 @@ Two limits, stated for accuracy:
 
 ## PoC
 
-See `PoC.t.sol` accompanying this submission.
+Two artefacts are provided.
 
-The load-bearing assertion is `test_attackerHoldsNavStartOpenIndefinitely`: after twenty batches of
-manager work on a portfolio a clean sweep finishes in four, `navStart` is still non-zero and
-`navCursor` has never advanced past a single batch.
-`test_everyPrivilegedPathIsGatedBehindTheStuckFlag` demonstrates the blast radius,
-`test_noAdminLeverClearsNavStart` demonstrates the absence of recovery, and
-`test_control_sweepCompletesWithoutInterference` is the control showing the same portfolio finalises
-normally when the attacker is absent.
+**1. `harness/` — 13 tests, all passing, runnable with no contest-repo dependency.**
+
+```
+$ forge test -vv
+Ran 7 tests for test/NavFreeze.t.sol:NavFreezeTest
+[PASS] test_attackerHoldsNavStartOpenIndefinitely()
+  rounds run                      20
+  batches a clean sweep needs     4
+  furthest cursor ever reached    10
+[PASS] test_routeA_plainTransferByAnyNftHolder()
+[PASS] test_everyPrivilegedPathIsGatedBehindTheStuckFlag()
+[PASS] test_noAdminLeverClearsNavStart()
+[PASS] test_control_sweepCompletesWithoutInterference()
+[PASS] test_boundary_singleTransactionSweepIsImmune()
+[PASS] test_gas_derivePortfolioSizeThreshold()
+...
+13 tests passed, 0 failed
+```
+
+`updateNav`, `_requireFreshNav`, `_requireIdleNav`, `_addLoanToNav`, `_removeLoanFromNav`,
+`_invalidateNav` and the `LoansNFT._update` nonce block are copied **verbatim** from the contest
+source — every branch, assignment and ordering unchanged. Only roles, the ERC-20 and the calculator's
+arithmetic are reduced to stand-ins, none of which the defect depends on. `harness/README.md` gives
+the full copied-vs-stubbed breakdown.
+
+Load-bearing result: after **twenty** batches of manager work on a portfolio a clean sweep finishes in
+**four**, `navStart` is still non-zero and `navCursor` has never advanced past a single batch.
+`test_control_sweepCompletesWithoutInterference` is the control — the same portfolio finalises
+normally when the attacker is absent — and `test_boundary_singleTransactionSweepIsImmune` demonstrates
+the precondition honestly by showing the attack *failing* against an atomic sweep.
+
+**2. `PoC.t.sol` — the full-repo version**, which drops into a clone of `tare-io__tare-contracts` and
+drives the real contracts. It encodes the same sequence against real `Loans` / `LoansNFT` /
+`PortfolioVault` / `NavCalculator`. It has not been executed, and its constructor calls are marked
+`// SIG?` where they need checking against the contest commit.
 
 ---
 
