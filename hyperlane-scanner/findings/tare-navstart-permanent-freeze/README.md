@@ -34,10 +34,29 @@ The restart condition is controlled by an input **any third party can move**:
 }
 ```
 
-`currentNonce` is `loansNFT.ownershipNonce(address(this))`. It bumps whenever a loan NFT enters or
-leaves the vault — including when an **unsolicited** NFT is pushed to it. One such push, landing in
-any block between two `updateNav` transactions, resets the cursor to zero and throws away the entire
-batch of work the manager just paid for.
+`currentNonce` is `loansNFT.ownershipNonce(address(this))`. `LoansNFT._update` — **verified against
+the contest source** — bumps it for *both* sides of every movement, with only the zero address
+skipped:
+
+```solidity
+// Bump per-address ownership nonce so external integrators can detect any
+// change to the NFT ownership set of a given address. The zero address is
+// skipped (mint's `from`, burn's `to`) because no consumer reads that slot.
+unchecked {
+  if (from != address(0)) ++ownershipNonce[from];
+  if (to != address(0)) ++ownershipNonce[to];   // <-- the attacker's lever
+}
+```
+
+The second line is the whole finding. `to` is bumped unconditionally, which means:
+
+- an **incoming transfer** the vault never asked for bumps it, and
+- a **mint** bumps it too — `from` is the zero address and is skipped, but `to` is not.
+
+There is no consent check anywhere on the receiving side, and by design there cannot be: known issue
+#20 records that the protocol deliberately uses the non-safe ERC-721 variants so no recipient hook
+can reject a delivery. One such push, landing in any block between two `updateNav` transactions,
+resets the cursor to zero and throws away the entire batch of work the manager just paid for.
 
 Repeat that once per `updateNav` transaction and the sweep never reaches the end, `navStart` never
 returns to `0`, and the vault is frozen — with **no configuration lever, no admin function, and no
@@ -239,6 +258,18 @@ Recorded here because they came out of the same pass and are cheap to check:
   `acceptSaleOffer` but says nothing about the NFT side. Impact requires a `LoansExchange` bug, so it
   is an exposure-window issue rather than a finding. Worth checking against `LoansExchange.sol`,
   which was not available for this review.
+- **A locked loan NFT cannot be evacuated from the vault.** `LoansNFT._update` reverts `TokenLocked()`
+  unless `auth == unlocker`, so `PortfolioVault.transferLoans` — which calls `transferFrom` with the
+  vault as `auth` — cannot move a locked token out. Who can lock a vault-held token is decided by
+  `_isAuthorized(owner=vault, msg.sender, id)`, and the vault's only outbound approval is the
+  per-token grant to `exchange` in `createSaleOffer`. The `lock` NatSpec confirms this is deliberate:
+  *"per-token approved addresses may also lock. This lets integrators such as `LoansExchange` lock
+  listed loans with narrow per-token approvals."* Combined with the residual-approval item above —
+  those per-token approvals are never revoked when an offer is cancelled or expires — the exchange
+  retains a standing ability to lock previously-listed vault loans indefinitely. Whether that is
+  reachable depends entirely on `LoansExchange.sol`, which was not available for this review. **This
+  is the highest-value remaining lead in the codebase**: it is the vault-side mirror of known issue
+  #1, and #1 only documents the `Loans`/investor side.
 - **`NavCalculator.setMaxPortfolioFactor` bumping `configurationVersion` only when it clamps is
   correct**, not a bug — raising the cap alone leaves `portfolioFactor` unchanged, so a cached NAV
   computed under the old cap stays valid. Recorded because `specs/invariants.md` §7 flags it as
@@ -246,13 +277,15 @@ Recorded here because they came out of the same pass and are cheap to check:
 
 ## Verification checklist
 
-- [ ] **`LoansNFT.ownershipNonce` semantics — check this first, the finding depends entirely on it.**
-      Confirm it is per-address, and that `_update` bumps it for the *recipient* on an incoming
-      transfer and on mint. If the nonce only tracks outgoing transfers, Route B collapses and only
-      Route A survives.
+- [x] **`LoansNFT.ownershipNonce` semantics — DONE, confirmed against source.** Declared
+      `mapping(address account => uint256 nonce) public ownershipNonce` (per-address), and `_update`
+      bumps `to` unconditionally for any non-zero recipient, including on mint. Both Route A and
+      Route B are live. `mint` is gated `msg.sender == LOANS_CONTRACT`, so Route B runs through
+      `Loans.create` as described; there is no other mint path and no external burn.
 - [ ] `Loans.create` mints the loan NFT to the `investor` argument (corroborated by known issue #21:
       *"`fund` pulls from `loansNFT.ownerOf(loanId)` (the investor)"*) and has no check that the
-      investor consented.
+      investor consented. **This is now the only load-bearing unverified step**, and it only affects
+      Route B — Route A (push any existing loan NFT to the vault) is fully confirmed either way.
 - [ ] `grep -n "navStart" contracts/PortfolioVault.sol` — confirm the only writes are the three in
       `updateNav`, and that no admin/guardian function resets it.
 - [ ] Measure the real per-loan gas of `updateNav` against the block gas limit to state a concrete
