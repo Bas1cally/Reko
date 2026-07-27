@@ -74,13 +74,21 @@ Everything below reverts with `NavComputationInProgress()` for as long as the at
 | `fundLoan` / `fundLoans` | `_requireIdleNav` (in `_fundLoans`) | idle USDC cannot be deployed |
 | `addLoansToNav` / `removeLoansFromNav` | `_requireIdleNav` | curated list frozen |
 | `acceptSaleOffer` | `_requireIdleNav` | cannot buy |
-| `transferLoans` | `_requireIdleNav` | **cannot evacuate the portfolio** |
+| `transferLoans` | `_requireIdleNav` | cannot evacuate the portfolio directly |
 | `setCalculator` | `_requireIdleNav` | cannot swap the valuation model |
 | `setLoans` | `_requireIdleNav` | cannot migrate — the documented recovery path for #30 |
 
 Note the last three rows: the vault's own emergency exits are gated behind the same flag that is
 stuck. `setLoans` is the migration path the team names in known issue #30, and it is unreachable
 precisely when it is needed.
+
+**One partial exit does survive, and the submission should say so rather than overclaim.**
+`createSaleOffer` and `cancelSaleOffer` carry **no** `_requireIdleNav()`, so a frozen manager can
+still list the portfolio on `LoansExchange` and have a named buyer settle it. That converts NFTs into
+USDC inside the vault; it does not unfreeze anything. `approveRedemption` stays blocked, so the
+proceeds are as immobile as the loans were, and the route needs a willing counterparty at a price the
+manager does not control from a position of visible distress. The claim to make is *"investor funds
+are locked and the vault is inoperable"*, not *"the assets can never move."*
 
 ## Why there is no recovery
 
@@ -122,12 +130,20 @@ non-safe transfer variants so the recipient has no hook to reject with. Cost: on
 they are stuck in the vault afterwards, since `transferLoans` is itself frozen. This route needs a
 supply of NFTs, so it is the weakest of the three on its own.
 
-**Route B — an approved originator, unlimited and free.** Known issue #4: *"A compromised or
-malicious originator can name any address in any role"*, with `borrower` / `investor` / `servicer`
-drawn from the originator's **own self-curated book**. Known issue #14 confirms those books are
-permissionless per caller. So an originator registers `address(vault)` as an Investor in its own
-book and calls `create(..., investor = vault, ...)`, which mints a loan NFT to the vault. No consent
-from the vault, no funds moved, repeatable without limit.
+**Route B — an approved originator, unlimited and free.** Confirmed against `Loans.sol`.
+`Loans._create` validates the investor against the **originator's own book** and mints
+unconditionally:
+
+```solidity
+require(isRegisteredForRole(originator, Roles.Investor, investor), UnregisteredAddress(investor));
+...
+loansNFT.mint(investor, loanId);
+```
+
+Known issue #14 confirms those books are permissionless per caller, so the originator registers
+`address(vault)` as an Investor in its own book and calls `create(..., investor = vault, ...)`. The
+vault is never consulted. `_create` moves no tokens — it writes loan storage, mints the NFT, and
+books one internal ledger entry — so the marginal cost is a cheap write, repeatable without limit.
 
 Known issue #20 already states the primitive — *"Combined with 14, an approved originator can also
 spam NFTs to arbitrary addresses at create time"* — but frames the impact purely as
@@ -253,23 +269,25 @@ Recorded here because they came out of the same pass and are cheap to check:
   bump, no invalidation, cached NAV silently overstated. Requires a `PORTFOLIO_MANAGER` to accept a
   degenerate offer, so this is self-harm by a trusted role — low value on its own, but it is the one
   cash-side NAV mutation in the contract with no invalidation and no nonce coverage.
-- **`createSaleOffer` leaves per-token ERC-721 approvals to the exchange after the offer is cancelled
-  or expires.** Known issue #25 documents the analogous residual *ERC-20* approval from
-  `acceptSaleOffer` but says nothing about the NFT side. Impact requires a `LoansExchange` bug, so it
-  is an exposure-window issue rather than a finding. Worth checking against `LoansExchange.sol`,
-  which was not available for this review.
-- **A locked loan NFT cannot be evacuated from the vault.** `LoansNFT._update` reverts `TokenLocked()`
-  unless `auth == unlocker`, so `PortfolioVault.transferLoans` — which calls `transferFrom` with the
-  vault as `auth` — cannot move a locked token out. Who can lock a vault-held token is decided by
-  `_isAuthorized(owner=vault, msg.sender, id)`, and the vault's only outbound approval is the
-  per-token grant to `exchange` in `createSaleOffer`. The `lock` NatSpec confirms this is deliberate:
-  *"per-token approved addresses may also lock. This lets integrators such as `LoansExchange` lock
-  listed loans with narrow per-token approvals."* Combined with the residual-approval item above —
-  those per-token approvals are never revoked when an offer is cancelled or expires — the exchange
-  retains a standing ability to lock previously-listed vault loans indefinitely. Whether that is
-  reachable depends entirely on `LoansExchange.sol`, which was not available for this review. **This
-  is the highest-value remaining lead in the codebase**: it is the vault-side mirror of known issue
-  #1, and #1 only documents the `Loans`/investor side.
+- ~~**`createSaleOffer` leaves residual per-token ERC-721 approvals to the exchange**, giving it a
+  standing ability to lock previously-listed vault loans — the vault-side mirror of known issue #1,
+  and the highest-value remaining lead in the codebase.~~ **WRONG — retracted once `LoansNFT` and
+  `LoansExchange` were read together.** `LoansNFT.lock` clears the approval as its first action
+  (`_approve(address(0), id, address(0), false)`), and `LoansExchange.createOffer` locks every listed
+  loan immediately. The approval is consumed by the lock inside the same transaction that grants it,
+  and `unlock` never restores it. No residual approval exists and no standing lock capability
+  follows. Kept rather than deleted because it was written up as the strongest remaining lead one
+  step before the source that disproved it arrived: the mechanism was genuinely plausible from
+  `LoansNFT` alone, and only reading the two contracts *together* killed it.
+- **A listed loan's cashflows are unreachable by anyone while its offer is open.** Real, but
+  self-inflicted and recoverable, so not submitted separately. `LoansExchange.createOffer` locks each
+  listed loan with `unlocker = address(exchange)`. `Loans.investorWithdraw` pays the **unlocker**
+  whenever one is set (`require(cachedUnlocker == msg.sender, Unauthorized())`), so the vault is no
+  longer the authorised withdrawer and `collectCashflows` reverts — while `LoansExchange` contains no
+  function that calls `investorWithdraw` at all. Interest and principal accrue in the ledger with
+  nobody able to pull them until the offer is cancelled or accepted. `cancelSaleOffer` is not
+  idle-gated, so a manager can always recover; the real exposure is a manager who lists loans and
+  forgets them.
 - **`NavCalculator.setMaxPortfolioFactor` bumping `configurationVersion` only when it clamps is
   correct**, not a bug — raising the cap alone leaves `portfolioFactor` unchanged, so a cached NAV
   computed under the old cap stays valid. Recorded because `specs/invariants.md` §7 flags it as
@@ -282,10 +300,14 @@ Recorded here because they came out of the same pass and are cheap to check:
       bumps `to` unconditionally for any non-zero recipient, including on mint. Both Route A and
       Route B are live. `mint` is gated `msg.sender == LOANS_CONTRACT`, so Route B runs through
       `Loans.create` as described; there is no other mint path and no external burn.
-- [ ] `Loans.create` mints the loan NFT to the `investor` argument (corroborated by known issue #21:
-      *"`fund` pulls from `loansNFT.ownerOf(loanId)` (the investor)"*) and has no check that the
-      investor consented. **This is now the only load-bearing unverified step**, and it only affects
-      Route B — Route A (push any existing loan NFT to the vault) is fully confirmed either way.
+- [x] **`Loans.create` mints to the `investor` argument — DONE, confirmed against source.**
+      `_create` does `loansNFT.mint(investor, loanId)` after checking only
+      `isRegisteredForRole(originator, Roles.Investor, investor)` — the originator's *own* book. No
+      consent from the investor, no token movement in the whole function.
+      **Note the one mitigation this reveals**: `create` is `whenNotPaused` on `Loans`, so pausing
+      `Loans` stops Route B. It does **not** stop Route A — `LoansNFT` is not `Pausable` and `_update`
+      has no pause check, so plain ERC-721 transfers into the vault keep bumping the nonce no matter
+      what is paused. There is no pause anywhere in the system that closes this.
 - [ ] `grep -n "navStart" contracts/PortfolioVault.sol` — confirm the only writes are the three in
       `updateNav`, and that no admin/guardian function resets it.
 - [ ] Measure the real per-loan gas of `updateNav` against the block gas limit to state a concrete
