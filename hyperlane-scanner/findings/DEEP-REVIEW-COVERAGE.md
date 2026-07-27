@@ -61,6 +61,19 @@ key/RPC compromise, which is opsec, not a code bug.
 | **Sealevel (Solana) multisig ISM** — `multisig.rs` verify | Same monotonic-index two-pointer algo as EVM; `signatures.len() >= threshold` guard prevents OOB; duplicates can't double-count. Sound. |
 | **Sealevel multisig ISM — account validation** (`validators_and_threshold`) | Correct: owner check (`owner == program_id`) **plus** PDA re-derivation (`key == create_program_address(seeds(origin, bump), program_id)`). No account-substitution / fake-config attack. |
 
+## Round 6 — differential EVM ↔ Sealevel (the non-standard angle)
+
+Hyperlane ships **two implementations of the same protocol**. Bugs hide in the
+seam where they disagree — invisible to anyone auditing one side. Compared:
+
+| Compared surface | Result |
+|---|---|
+| Aggregation threshold semantics (EVM `AbstractAggregationIsm` vs Sealevel `IsmNode::Aggregation`) | **Equivalent.** EVM decrements to exactly 0 (over-provisioning underflows/reverts); Sealevel requires `verified == threshold`. Sealevel even carries a test (`test_aggregation_over_provisioned_rejected`) explicitly asserting EVM parity. |
+| **Account-iterator alignment** in Sealevel aggregation (classic Solana killer: `verify_node` skips metadata-less sub-ISMs *without* consuming accounts) | **Sound.** `required_accounts_for_node` mirrors the identical skip and advances its cursor by each sub-ISM's exact account count. They know this bug class — there's a dedicated regression test for duplicate `TrustedRelayer` positional consumption. Every node also key-checks the account it pops, so misalignment reverts rather than substitutes. |
+| `sub_metadata_at` (Sealevel) vs `AggregationIsmMetadata` (EVM) | Both bounds-safe. Sealevel validates header length, `start <= end`, `end <= len` — no OOB panic. |
+| `calculate_current_level` (Sealevel rate limiter arithmetic) | u128 intermediates, negative elapsed clamped to 0, capped at `max_capacity`. No overflow/underflow. |
+| **RateLimited: EVM vs Sealevel** | Notable asymmetry, but *not* a bug: Sealevel gates bucket mutation on the mailbox **process-authority PDA signer** (`invoke_signed`), where EVM uses `_isDelivered`. Different mechanisms, same purpose — anti-drain, not authentication. Both are gate/NULL modules requiring composition. This *confirms* the downgrade of the RateLimitedIsm finding: the EVM contract's non-authentication is the module category's design, and each VM implements the anti-griefing guard idiomatically. |
+
 ## Not yet reviewed (candidate next steps, honest gaps)
 
 - `CheckpointFraudProofs` / `AttributeCheckpointFraud` (fraud-proof math).
