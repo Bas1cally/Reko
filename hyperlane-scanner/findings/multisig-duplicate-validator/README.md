@@ -111,6 +111,24 @@ has. Two consequences, both demonstrated in `WeightedMultisigDuplicate.PoC.t.sol
 [PASS] test_factoryAcceptsWeightsExceedingTotalWeight()
 ```
 
+## EVM is the sole outlier among all three implementations
+
+Hyperlane ships this ISM on three VMs. Two defend against duplicates; only EVM
+does not:
+
+| Implementation | Validator set model | Duplicate possible? |
+|---|---|---|
+| **Sealevel / Solana** | array + explicit `HashSet` uniqueness check in `validate_config` | ❌ rejected at config time, with a comment naming the attack |
+| **CosmWasm** | true set semantics — validators managed individually via `enroll_validator` / `unenroll_validator`; the SDK adapter computes `new Set(config.validators.map(v => v.address))` and diffs | ❌ structurally impossible |
+| **EVM** | `abi.encode(address[], uint8)` blob baked into MetaProxy bytecode | ✅ **accepted at every layer** |
+
+This is the strongest form of the argument: it is not a judgement call about
+what *ought* to be validated. Two of the team's own three implementations
+prevent it — one by explicit check, one by data model. The EVM path is the
+outlier, and it is the one carrying the overwhelming majority of deployed
+value (983 `merkleRootMultisigIsm` + 981 `messageIdMultisigIsm` instances in
+the registry).
+
 ## Could an attacker *engineer* the misconfiguration rather than wait for it?
 
 The fair objection to a config-dependent finding is "that needs a mistake."
@@ -143,7 +161,43 @@ the nominal M-of-N everywhere.
 engineering / process, not a purely technical exploit, and many Immunefi
 programs treat such findings as out of scope or Low. The defensible claim is
 narrow and true: *the EVM pipeline has no automated defense at any layer, and
-the team's own Solana implementation proves they consider this a real risk.*
+two of the team's own three implementations do defend against it.*
+
+### Ruled out: "just simulate the admin with a script"
+
+Checked, because it is the obvious next thought — it does not work, and the
+reason is worth stating in the report so a triager doesn't have to ask:
+
+- Every path that could point a live route at a duplicate-bearing ISM is
+  cryptographically gated, not UI-gated:
+  `MailboxClient.setInterchainSecurityModule` → `onlyOwner`,
+  `DomainRoutingIsm.set` / `.remove` → `onlyOwner`,
+  `AbstractStorageMultisigIsm.setValidatorsAndThreshold` → `onlyOwner`.
+  `onlyOwner` compares `msg.sender` against stored state; `msg.sender` is
+  derived from an ECDSA signature at the protocol level. A script cannot
+  forge it — that is not an application-layer check to bypass.
+
+- **The decisive point: if you could act as the owner, you would not need this
+  bug.** With owner access you would simply call
+  `setInterchainSecurityModule(noopIsm)` or install a single-key multisig. The
+  duplicate trick is strictly *weaker* than the access it would require, so
+  admin-impersonation is self-defeating as a delivery vector. Anything
+  requiring owner keys is a key-compromise scenario, which every Immunefi
+  program lists as out of scope.
+
+- **What genuinely is permissionless — and why it is still safe:**
+  `StaticThresholdAddressSetFactory.deploy()` is `public`, so anyone may deploy
+  an ISM with a duplicated validator set. That is harmless by construction. The
+  CREATE2 salt is `keccak256(abi.encode(values, threshold))` and the metadata is
+  baked into the MetaProxy bytecode, so the address is a pure function of its
+  contents; the factory reuses an existing deployment (`if (!Address.isContract(_set))`).
+  Front-running a legitimate deployment therefore deploys the *identical*
+  contract — no squatting, no substitution. A maliciously deployed weak ISM
+  just sits there, inert, until an owner chooses to point at it.
+
+Net: the attacker can freely *create* the weak ISM; they cannot make anyone
+*use* it. The gap is and remains "a duplicate reaches the owner's config, and
+nothing automated flags it."
 
 ## Impact
 
