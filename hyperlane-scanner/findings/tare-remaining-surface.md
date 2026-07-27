@@ -31,18 +31,38 @@ That is the team explicitly saying "we maintain this by remembering to call a fu
 we have not verified we always do." That is a genuinely open question, not a documented issue — the
 31-item list has no entry for "function X forgets to invalidate NAV."
 
-### STATUS: pursued — see `tare-nav-staleness-loan-ledger/`
+### STATUS: pursued, and it went where the pattern predicted
 
-This lead was followed through. Result: of the six NAV inputs the invariant names, five are
-genuinely covered (two by the nonce/version checks in `_requireFreshNav`, three by explicit
-`_invalidateNav()` calls at vault-side mutation sites). The sixth — **the loan ledger** — has no
-coverage at all, because it is the only one mutated outside the vault, and `Loans` has no callback,
-nonce, or event the vault consumes. `maxNavAge` is the only thing standing between a servicer
-charge-off and a mispriced redemption.
+The freshness invariant was worked through against real source. Of the six NAV inputs it names,
+five are genuinely covered; the sixth — **the loan ledger** — has no coverage at all. That analysis
+was correct **and already disclosed**, as design tradeoff **D-9** (*"does not detect per-loan state
+mutations"*), reinforced by known issues #5 and #10 and by T-3. Dead on arrival:
+`tare-nav-staleness-loan-ledger/README.md`, banner at the top.
 
-Write-up, severity argument and PoC: `tare-nav-staleness-loan-ledger/README.md`. Note the
-verification banner there — the repo clone was lost with the container, so the quoted code could not
-be re-read at write-up time and needs a re-check before submission.
+**That is three for three.** Every finding this engagement produced by reading Tare's source the
+standard way — `Rescuable` (→ #2), the `LoansNFT` lock path (→ #1), NAV freshness (→ D-9) — was
+already in the team's own documentation. The analysis kept being right and kept being worthless.
+The lesson is specific: on a codebase with a 31-item known-issue list plus T/D catalogues, *reading
+for defects converges on the same defects the team already found*. Read `SECURITY.md` first, then
+hunt in the space it does not describe.
+
+### What that reframing produced: `tare-navstart-permanent-freeze/`
+
+Applying it to the same subsystem: `SECURITY.md` discusses NAV **correctness** exhaustively (#7,
+#8, #9, #16, #28, D-9, T-3) and NAV **liveness** almost not at all. So look at liveness.
+
+`updateNav` is paginated and `navStart` is its in-progress flag. Every other privileged function in
+the vault — including both evacuation paths, `transferLoans` and `setLoans` — is gated behind
+`navStart == 0`, and `navStart` is cleared in exactly one place: the finalisation branch. The
+restart condition includes `ownershipNonce(vault)`, which **any third party can bump** by pushing an
+unsolicited loan NFT into the vault. One bump per `updateNav` transaction discards the whole batch,
+so the sweep never terminates and the vault never unfreezes. There is no setter, no guardian
+override, and no pause sequence that resets the flag.
+
+The same primitive #20 already discloses (*"an approved originator can spam NFTs to arbitrary
+addresses at create time"*) — but #20 frames the impact as an inventory nuisance, not as a permanent
+freeze of an unrelated vault. That gap between a disclosed primitive and an undisclosed consequence
+is where the remaining value in this codebase is.
 
 ### Concrete next step
 

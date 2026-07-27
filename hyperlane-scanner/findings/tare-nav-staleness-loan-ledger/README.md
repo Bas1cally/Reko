@@ -1,4 +1,31 @@
-# Tare: cached NAV is never invalidated by loan-ledger changes made through `Loans`
+# Tare: cached NAV is never invalidated by loan-ledger changes — INVALIDATED, documented as design tradeoff D-9
+
+> ## ⛔ DEAD — do not submit. This is the team's own design tradeoff D-9.
+>
+> `SECURITY.md` was obtained after this was written. It contains, verbatim:
+>
+> > "**D-9 — `_navOwnershipNonce` covers NFT-set churn only.** The snapshot mechanism detects when
+> > the vault's NFT inventory changes mid-cycle but **does not detect per-loan state mutations**.
+> > Tradeoff between minimal write overhead and strict freshness during NAV."
+>
+> That is this finding, stated as a deliberate choice. It is corroborated twice more:
+>
+> - **#5** explicitly enumerates `updateLoanData` status/date manipulation as a known servicer power.
+> - **#10** documents that the ERC-7540 claim price is pinned at approval time with no time-weighted
+>   blending, and that "a user whose request lingers across multiple NAV updates is exposed to
+>   whichever NAV the manager next pins."
+> - **T-3** additionally assumes the NAV batch submitter is "not biasing NAV via composition / timing."
+>
+> The `specs/invariants.md` §6 wording that motivated this ("every state affecting NAV … loan ledger
+> … invalidates the cached NAV") is contradicted by D-9 in the team's own security doc. Where two of
+> the project's documents disagree, a judge follows the one that discloses the weakness. Third
+> consecutive Tare finding to land on a documented item — see `../tare-remaining-surface.md` for what
+> that pattern means for how this codebase should be attacked.
+>
+> **Live replacement finding**: `../tare-navstart-permanent-freeze/` — same subsystem, the *liveness*
+> half rather than the *freshness* half, and not covered by D-9 or anything else in the 31-item list.
+>
+> Original write-up preserved below for the record.
 
 > ## ⚠️ VERIFICATION STATUS — read before submitting
 >
