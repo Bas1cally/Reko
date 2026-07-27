@@ -1,4 +1,13 @@
-# Kamino klend: obligation-order execution bonus is not clamped to its configured maximum — borrower over-liquidated
+# Kamino klend: obligation-order execution bonus is not clamped to its configured maximum (latent — not reachable)
+
+> ## ⛔ NOT EXPLOITABLE — reachability analysis kills it. Do not submit as a vulnerability.
+>
+> I completed the final verification step and **the unclamped state cannot be
+> reached on mainnet.** The missing clamp is real and the maths below is
+> reproducible, but no attacker can trigger it. Details in
+> "Reachability — why this is not exploitable". Keep this as a code-quality /
+> defense-in-depth note, not a bounty submission.
+
 
 **Target**: `Kamino-Finance/klend` (Immunefi `kamino`, max $1,500,000 — the repo
 is an in-scope `smart_contract` asset, as are the deployed program IDs)
@@ -6,8 +15,10 @@ is an in-scope `smart_contract` asset, as are the deployed program IDs)
 - `programs/klend/src/state/obligation_order_operations.rs` → `evaluate_stop_loss`
 - `programs/klend/src/state/liquidation_operations.rs` → `interpolate_bonus_rate`, `calculate_order_execution_bonus_rate`
 
-**Status**: **Verified by a unit test compiled and run against the real klend
-types** (`poc_test.rs`, passes). Not yet reproduced end-to-end on a validator.
+**Status**: The missing clamp is **verified** by a unit test against the real
+klend types (`poc_test.rs`, passes). The **reachability check failed**: the
+input state the bug needs cannot occur on mainnet. See the reachability
+section — that check is what decides this is not a vulnerability.
 
 ---
 
@@ -155,7 +166,55 @@ The incentive distortion is therefore real but bounded: an executor maximises
 their take by waiting for roughly a 2-point LTV overshoot, yielding **2.8× the
 validated cap** — not by waiting indefinitely.
 
-## Impact
+
+## Reachability — why this is not exploitable
+
+`get_liquidation_params` evaluates checks in an `or_else` chain, and the order
+path is **last**:
+
+```rust
+check_liquidate_obligation(&inputs)
+    .or_else(|| check_individual_autodeleverage_obligation(&inputs))
+    .or_else(|| check_market_wide_autodeleverage_obligation(&inputs))
+    .or_else(|| check_reserve_debt_maturity_reached(&inputs))
+    .or_else(|| check_borrow_reserve_debt_term_reached(&inputs))
+    .or_else(|| check_obligation_order_execution(&inputs))   // ← the buggy path
+```
+
+The bug needs `distance > 1`, which for **every** stop-loss condition type
+(`UserLtvAbove`, `LiquidationLtvCloserThan`, `DebtCollPriceRatioAbove`) reduces
+to the same requirement: `user_ltv > unhealthy_ltv`. Both branches are closed:
+
+| Market configuration | What happens |
+|---|---|
+| Price-triggered liquidation **enabled** (normal) | `check_liquidate_obligation` returns `Some(...)` as soon as `user_ltv >= unhealthy_ltv`, short-circuiting the chain. The order path never runs. |
+| Price-triggered liquidation **disabled** | `check_liquidate_obligation` returns `None` — but `find_applicable_obligation_order` then skips every condition where `is_price_triggered()` is true, which is exactly these stop-loss types. Only `Always`/`Never` remain, and `Always` uses `get_constant_bonus_rate` with no interpolation. |
+
+The one remaining way to make `check_liquidate_obligation` return `None` while
+`user_ltv > unhealthy_ltv` is `max_allowed_ltv_override_pct_opt`. It is not
+attacker-reachable:
+
+```rust
+let max_allowed_ltv_override_pct_opt =
+    if accounts.liquidator.key() == obligation.owner && max_allowed_ltv_override_percent > 0 {
+        if cfg!(feature = "staging") { Some(max_allowed_ltv_override_percent) }
+        else { msg!("Warning! Attempting to set an ltv override outside the staging program"); None }
+    } else { None };
+```
+
+Self-liquidation only, and `None` on any non-staging build — i.e. always `None`
+on mainnet.
+
+**Conclusion:** the clamp is genuinely missing and the interpolation genuinely
+overshoots, but the surrounding control flow prevents the overshooting input
+from ever arriving. This is a latent defect, not a vulnerability.
+
+It is still worth fixing: the guard that makes it safe is incidental (an
+ordering in an `or_else` chain plus a flag interaction), not a bound on the
+value itself. A future change to the check order, or a new non-price-triggered
+condition type that can produce a distance above 1, would make it live.
+
+## Impact (only if the state above were reachable)
 
 The borrower loses collateral in excess of the maximum the protocol validated
 and displayed when the order was created. The excess is bounded by
