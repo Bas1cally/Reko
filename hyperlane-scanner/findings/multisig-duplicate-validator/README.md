@@ -1,5 +1,16 @@
 # EVM multisig ISM accepts duplicate validators → silent quorum collapse (Solana rejects it)
 
+> ## ⚠️ LIKELY INVALID UNDER IMMUNEFI SCOPE
+>
+> Scope check (July 2026): deployed EVM multisig ISMs *are* in-scope assets, but
+> producing the vulnerable state requires an owner action, and the program lists
+> "attacks requiring access to privileged addresses (governance, owner, etc)"
+> as out of scope. No deployed set contains a duplicate either, making the
+> vulnerable configuration "demonstrably unused". Expect rejection; if submitted
+> at all, submit as Informational with no economic-damage claim.
+> See `../SCOPE-VERDICT.md`.
+
+
 **Target**: `hyperlane-xyz/hyperlane-monorepo`
 - `solidity/contracts/libs/StaticAddressSetFactory.sol` (`StaticThresholdAddressSetFactory.deploy`)
 - `solidity/contracts/libs/StaticWeightedValidatorSetFactory.sol` (`deploy` — no validation at all)

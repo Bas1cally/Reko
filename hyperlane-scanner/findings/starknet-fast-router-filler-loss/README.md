@@ -1,5 +1,18 @@
 # Starknet FastTokenRouter: every fast-transfer settlement reverts permanently, stranding the liquidity provider's capital
 
+> ## ⛔ OUT OF IMMUNEFI SCOPE — do not submit
+>
+> Scope check (July 2026): the program's assets are **138 deployed EVM contract
+> addresses + 2 websites; no GitHub repository is an asset, and Starknet does
+> not appear as a chain at all**. Separately, the program states that
+> "vulnerabilities in components that exist in the codebase but are demonstrably
+> unused or not integrated with production systems will be classified as
+> invalid" — which describes this component exactly.
+>
+> The defects below are real and worth reporting to the team directly
+> (GitHub issue / Discord), but not via Immunefi. See `../SCOPE-VERDICT.md`.
+
+
 **Target**: `hyperlane-xyz/hyperlane-starknet`
 **Component**: `cairo/crates/token/src/components/fast_token_router.cairo`
 (reached via `extensions/fast_hyp_erc20.cairo`, `extensions/fast_hyp_erc20_collateral.cairo`)
