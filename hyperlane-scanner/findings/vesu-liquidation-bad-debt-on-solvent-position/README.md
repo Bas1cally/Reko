@@ -2,23 +2,32 @@
 
 **Target**: `vesuxyz/vesu-v2`, `src/pool.cairo`.
 
-> ## ⚠️ Programme status is UNVERIFIED — read this before acting on the scope claims
+> ## ✅ Programme question RESOLVED — 28 Jul 2026
 >
-> Every statement in this report about the Immunefi programme — the $100,000
-> maximum, "no KYC", the eleven in-scope files, the `vesu.xyz` Primacy-of-Impact
-> entry — comes from an **unofficial community mirror**
-> ([`infosec-us-team/Immunefi-Bug-Bounty-Programs-Unofficial`](https://github.com/infosec-us-team/Immunefi-Bug-Bounty-Programs-Unofficial)),
-> not from immunefi.com. `immunefi.com` is egress-blocked from the environment
-> this work was done in and was never reachable, so the listing was never
-> confirmed at source.
+> The open question in this report was never the defect, only *where to send it*. That is now
+> answered: **Vesu runs an official bug bounty on Sherlock**, live since 27 Jul 2026 21:57, max
+> 50,000 USDC, scope `https://github.com/vesuxyz/vesu-v2` — the exact repo and file this finding
+> targets. The earlier Immunefi listing (sourced from an unofficial mirror, never confirmed at
+> source, see `../vesu-programme-status.md`) is superseded and should be disregarded.
 >
-> Mirror state as of its last scrape (2026-07-26): `project/vesu.json` present,
-> `inviteOnly: false`, `endDate: null`, `maxBounty: 100000`, `kyc: false`,
-> `updatedDate: 2026-05-27`.
+> **But this finding is very likely out of scope for that programme.** It was disclosed by email to
+> `security@vesu.xyz` *before* the programme existed, and Sherlock's Vesu scope excludes
+> *"vulnerabilities that have already been reported or are known to the protocol team"*. Do **not**
+> re-submit it as a fresh Sherlock report — the team has it in their inbox, and a duplicate arriving
+> as new work would cost more credibility than the payout is worth.
 >
-> **The technical finding below does not depend on any of this** — it is a defect
-> in code that is deployed and live. Only the question of *where to send it* is
-> open. See `../vesu-programme-status.md`.
+> The correct move is a one-paragraph reply on the existing email thread asking whether a disclosure
+> predating the programme qualifies. That puts the decision with them and keeps the disclosure clean.
+>
+> Two further notes for whoever picks this up:
+> - **Submitting to Sherlock's bug bounty platform requires a 250 USDC deposit.** For a finding the
+>   team already has, that is a bad bet regardless of the refund rules — which are not verified here.
+> - **Severity ceiling is High, not Critical.** Critical needs ≥10% of TVL, High ≥1%. A single
+>   liquidation clears neither on its own; the case rests on repeatability. High pays 1,000–10,000 USD.
+> - **Expect the "design choice" objection.** The programme lists *"Instant bad debt socialization
+>   among lenders of the affected asset only"* as intended. The rebuttal is already the core of this
+>   report: the defect is not that bad debt is socialised, but that it is *booked at all* on a
+>   position that is still over-collateralised — which the contract's own doc-comment contradicts.
 
 Per that mirror: Immunefi programme `vesu`, max **$100,000**, **no KYC**, and
 `src/pool.cairo` is an explicit in-scope `smart_contract` asset.
