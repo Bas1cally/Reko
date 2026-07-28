@@ -284,3 +284,58 @@ slot precisely to hold it hostage is not considered anywhere.
 3. Write the fix (required at submission): require a TSS signature over `(sub_tx_id, ix_data_hash)`
    in `store_execute_ix_data`, or remove the pre-execution close branch so the slot cannot be
    revoked once taken.
+
+
+---
+
+## Final certification (28 Jul) — both exclusion clauses checked, both empty
+
+The programme excludes *"known issues in README.md"* and *"known issues on GitHub issue tracker"*.
+Both were checked directly rather than assumed:
+
+- **README.md** — no known-issues, limitations, caveats or by-design section exists at all. Grepping
+  for `known issue|limitation|caveat|not handled|todo|fixme|by design` across `README.md`,
+  `contracts/svm-gateway/README.md` and `CLAUDE.md` returns nothing. The README is setup
+  instructions, an instruction map and doc links. Independently confirmed by the user pasting the
+  full file.
+- **GitHub issue tracker** — 12 issues total (4 open, 8 closed): timelocker design, access-control
+  scripts, PC20 token support, repo cleanup, rescueFunds fixes, protocol fees, style guides,
+  deployment planning. None touch `StoredIxData`, the ref route, the store instruction, squatting or
+  griefing.
+
+**The finding is not excluded.** Nothing else in the docs describes it either — see the
+verification section above.
+
+### One correction to the write-up, on the user's point
+
+Earlier drafts framed the >1232-byte condition as a limitation that narrows the impact. That is the
+wrong framing and it weakens the report for no reason. **The attacker chooses the target.** They
+watch the source chain, and they pick a pending outbound execute whose finalize transaction exceeds
+the limit — of which there will be many, since the entire ref route exists to serve them. The size
+threshold is a *selection criterion for the attacker*, not an obstacle to them. It belongs in the
+report as "the attacker selects an affected transaction", not as "only some transactions are
+affected".
+
+### The squat alone does not block — the close does
+
+Worth stating precisely, because a triager will probe it. `finalize_universal_tx_with_ix_data_ref`
+takes `store_refund_recipient` as an account and validates it against
+`stored_ix_data.store_refund_recipient` (the project's own test
+*"rejects a mismatched refund recipient on ref finalize"* covers this). So a relayer facing an
+attacker-occupied slot can still finalize — by passing the attacker's address and handing them the
+5,000-lamport upload fee. That is a small theft, not a lock.
+
+The lock comes from `close_stored_ix_data`: the attacker holds `store_refund_recipient`, so while
+`ExecutedSubTx` does not yet exist they may close at any time, recovering their rent. Closing
+immediately before each finalize attempt means the ref route never has its data. That is the
+mechanism to demonstrate in the PoC, and the one to lead with in the report.
+
+### PoC status
+
+Full Solana toolchain obtained: `solana-cli 2.1.21` including `cargo-build-sbf`, so the program can
+be compiled to BPF and driven for real rather than reimplemented. BPF build running. The project's
+own `tests/tx-size-ref.test.ts` is the reference for the instruction shapes, and it already contains
+`"rejects duplicate store for the same (sub_tx_id, ix_data_hash)"` — the team tests slot exclusivity
+as a correctness property without considering hostile occupation.
+
+**Contest deadline: 3 August 2026. Three hackers registered.**
