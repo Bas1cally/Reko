@@ -124,3 +124,96 @@ snapshots, so a duration change invalidates every stored epoch by construction.
   objection and pre-empt it.
 - Only 3 hackers registered at the time of writing, and the pool is split per unique issue with a
   single valid finding taking 100%. Depth beats breadth here.
+
+---
+
+# LEAD 2 — permissionless squat-and-close on `StoredIxData` (the stronger candidate)
+
+Found while hunting the permissionless path Lead 1 lacks. **This one clears the likelihood bar that
+Lead 1 fails**, and is the thread to pull next.
+
+## The primitive
+
+`store_execute_ix_data` (`instructions/execute.rs:183`) is **completely unauthorised**:
+
+```rust
+pub struct StoreExecuteIxData<'info> {
+    #[account(mut)]
+    pub caller: Signer<'info>,          // <- any keypair. no TSS, no config, no admin check
+    #[account(init, payer = caller,
+        seeds = [STORED_IX_DATA_SEED, sub_tx_id.as_ref(), ix_data_hash.as_ref()], bump)]
+    pub stored_ix_data: Account<'info, StoredIxData>,
+```
+
+The body validates only that `ix_data` is non-empty and that `ix_data_hash == keccak(ix_data)`. Both
+seeds are caller-supplied. And it records ownership of the slot:
+
+```rust
+stored.store_refund_recipient = ctx.accounts.caller.key();
+```
+
+## The gate that makes it an attack
+
+`close_stored_ix_data` ends with:
+
+```rust
+if !executed_sub_tx_exists && caller.key() != store_refund_recipient.key() {
+    return err!(GatewayError::StoredIxDataNotClosable);
+}
+```
+
+So **before execution has happened, whoever stored the data can close it again at will** — and rent
+is refunded to them on close. Squatting is therefore free and repeatable, not merely cheap.
+
+## The attack
+
+1. The outbound intent (`sub_tx_id` + `ix_data`) is created on Push Chain and is visible before a
+   relayer submits it to Solana.
+2. Attacker calls `store_execute_ix_data` with those exact values first. The PDA now exists with
+   `store_refund_recipient = attacker`.
+3. The relayer's own `store_execute_ix_data` fails — `init` on an existing account.
+4. Whenever the relayer is about to finalize, the attacker calls `close_stored_ix_data`. Permitted,
+   because `executed_sub_tx` does not exist yet and the attacker is the refund recipient. Rent comes
+   back.
+5. Repeat. The stored data is never present when finalize needs it.
+
+Against the programme's likelihood criteria: no privileged role, no meaningful balance (rent is
+refunded every cycle), no computation, few conditions. Impact would be permanent lockout of
+end-user funds on the outbound path.
+
+## Why this is still a LEAD — three things to verify before writing a word
+
+1. **Does `finalize_universal_tx` actually require `stored_ix_data`, and is there an inline
+   fallback?** If a relayer can pass `ix_data` directly in the transaction, they route around the
+   squat and there is no lock. `docs/6-TX-SIZE-REF-ROUTE.md` suggests the stored route exists
+   precisely because large `ix_data` exceeds Solana transaction size — if so, the lock is real but
+   **only for payloads too large to inline**, and that qualifier belongs in the report.
+2. **Is the intent genuinely knowable before relaying?** If `sub_tx_id`/`ix_data` are only visible
+   once the relayer broadcasts, this collapses into front-running — which this programme lists as
+   **out of scope**. This distinction decides whether the finding exists at all. Establish it from
+   the Push Chain side, not by assumption.
+3. **Does step 3 actually break the relayer?** If the pre-stored content is byte-identical, the
+   relayer might simply proceed with the existing PDA and only step 4 matters. That changes the
+   write-up from "blocks storage" to "revocable at will", which is still an attack but a different
+   one.
+
+## Suggested fix (required at submission)
+
+Bind the slot to the party entitled to it, or make it non-revocable once created:
+
+- Require a valid TSS signature over `(sub_tx_id, ix_data_hash)` in `store_execute_ix_data`, so only
+  a genuinely authorised payload can occupy the slot; or
+- drop the pre-execution close path entirely and reclaim rent only via the post-execution branch
+  (`executed_sub_tx_exists == true`), which is already permissionless and already refunds the
+  original storer.
+
+The second is the smaller change and removes the revocation primitive without touching the happy
+path.
+
+## Status of Lead 1 after this
+
+Lead 1 (epoch freeze) stays filed but is the weaker of the two: it needs an admin action and the
+programme's likelihood bar demands none. If both survive verification, submit Lead 2 as the Critical
+and mention Lead 1 separately — the pool is split per unique issue, so two distinct valid findings
+are worth more than one, and with only 3 hackers registered the marginal value of a second unique
+issue is high.
