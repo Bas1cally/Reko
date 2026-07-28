@@ -1,17 +1,10 @@
 # Sherlock submission — Tare
 
-> **Before pasting: replace the two `NNN` placeholders in Root Cause with real line numbers.**
-> Sherlock's bot flags an issue that references no line of code. Get the numbers with:
->
-> ```bash
-> cd <clone>/tare-io__tare-contracts
-> grep -n "function updateNav" contracts/PortfolioVault.sol
-> grep -n "ownershipNonce\[from\]" contracts/LoansNFT.sol
-> ```
->
-> The second one should be **169** (verified against an archived copy of the file — re-check anyway).
-> Everything else is ready as-is. Every code block already carries a language tag; do not strip them,
-> the bot rejects fenced blocks without one.
+> Ready to paste as-is. Two things not to break:
+> **(1)** every fenced code block carries a language tag (`solidity` / `bash` / `text`) — the bot
+> rejects blocks without one. **(2)** the `LoansNFT.sol#L169` link in Root Cause is the line-of-code
+> reference the bot asks for; keep it. Optionally sharpen the `PortfolioVault.sol` link by appending
+> `#L<n>` for the `function updateNav` line.
 
 ---
 
@@ -32,7 +25,7 @@ pagination cursor so the NAV cycle never finalises and `navStart` never returns 
 
 ## Root Cause
 
-In [`PortfolioVault.sol:updateNav`](https://github.com/sherlock-scoping/tare-io__tare-contracts/blob/b215321b218aac7e7fc0072d97c74e93f23bdaf7/contracts/PortfolioVault.sol#LNNN) the restart branch discards all pagination progress
+In [`PortfolioVault.sol:updateNav`](https://github.com/sherlock-scoping/tare-io__tare-contracts/blob/b215321b218aac7e7fc0072d97c74e93f23bdaf7/contracts/PortfolioVault.sol) the restart branch discards all pagination progress
 whenever the vault's NFT ownership nonce changed since the cycle began:
 
 ```solidity
