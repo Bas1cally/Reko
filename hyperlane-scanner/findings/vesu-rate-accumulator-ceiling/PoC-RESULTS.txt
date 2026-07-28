@@ -1,0 +1,20 @@
+Collected 3 test(s) from vesu package
+Running 3 test(s) from src/
+=== steps | interest | fee_shares (30d, 50% util) ===
+control: full_utilization_rate unchanged? a=32150205761 b=32150205761
+[PASS] vesu::test::test_rate_path_dependence::TestRatePathDependence::test_control_no_drift_inside_target_band (l1_gas: ~0, l1_data_gas: ~0, l2_gas: ~1364920000)
+=== 30 days, 50% utilization, 10M debt, identical elapsed time ===
+quiet  (1 update)  acc=1001952504288804822 interest=19525042888048220000000 fee_shares=1950790271937189760399
+daily  (30x)       acc=1002340855539034978 interest=23408555390349780000000 fee_shares=2339548506771274469693
+hourly (720x)      acc=1002362551283627397 interest=23625512836273970000000 fee_shares=2361293009019290275309
+interest ratio hourly/quiet (x1000) = 1210
+fee_shares ratio hourly/quiet (x1000) = 1210
+[PASS] vesu::test::test_rate_path_dependence::TestRatePathDependence::test_rate_path_dependence_30_days (l1_gas: ~0, l1_data_gas: ~0, l2_gas: ~2234560000)
+1    | 19525042888048220000000 | 1950790271937189760399
+6    | 22582578827226070000000 | 2256813547435144861982
+30   | 23408555390349780000000 | 2339548506771274469693
+180  | 23596228072693240000000 | 2358357733622630278006
+720  | 23625512836273970000000 | 2361293009019290275309
+[PASS] vesu::test::test_rate_path_dependence::TestRatePathDependence::test_convergence_in_update_frequency (l1_gas: ~0, l1_data_gas: ~0, l2_gas: ~2827080000)
+Tests: 3 passed, 0 failed, 0 ignored, 169 filtered out
+
