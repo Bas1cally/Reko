@@ -339,3 +339,28 @@ own `tests/tx-size-ref.test.ts` is the reference for the instruction shapes, and
 as a correctness property without considering hostile occupation.
 
 **Contest deadline: 3 August 2026. Three hackers registered.**
+
+---
+
+## LEAD 1 — CLOSED as not submittable (28 Jul)
+
+Checked whether a permissionless trigger exists, since the programme pays Critical only and defines
+Critical as high-likelihood = "without requiring privileged roles". Grep result, conclusive:
+
+- `epoch_usage.epoch` is written in exactly one place — the reset inside `consume_rate_limit`, always
+  to `current_epoch = timestamp / epoch_duration_sec`, a legitimate value.
+- `epoch_duration_sec` is written in exactly one place — `update_epoch_duration`, gated
+  `constraint = config.admin == admin.key()`.
+
+There is no non-admin path to freeze the epoch. The clock is not attacker-controlled and the divisor
+is admin-only. So the freeze is unavoidably admin-triggered.
+
+By the programme's own definition that makes it **not Critical** (fails the high-likelihood half),
+and the programme pays Critical only. Submitting it would be a non-qualifying report — exactly what
+risks the reputation penalty. **Do not submit Lead 1 here.**
+
+It remains a genuine code defect (an honest admin performing the documented, legitimate operation of
+raising a rate-limit window permanently bricks that token's withdrawals, and the sibling
+`check_block_usd_cap` shows the robust `!=` pattern was known). It would be valid on a platform that
+pays Medium/High or that does not gate on permissionless-only. Recorded for that possibility. Here,
+the squat finding (Lead 2) is the submission.
