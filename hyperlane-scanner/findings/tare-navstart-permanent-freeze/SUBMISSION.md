@@ -1,7 +1,17 @@
 # Sherlock submission — Tare
 
-> Fill in the two `<!-- LINE -->` markers with permalinks to the contest commit before pasting.
-> Everything else is ready as-is.
+> **Before pasting: replace the two `NNN` placeholders in Root Cause with real line numbers.**
+> Sherlock's bot flags an issue that references no line of code. Get the numbers with:
+>
+> ```bash
+> cd <clone>/tare-io__tare-contracts
+> grep -n "function updateNav" contracts/PortfolioVault.sol
+> grep -n "ownershipNonce\[from\]" contracts/LoansNFT.sol
+> ```
+>
+> The second one should be **169** (verified against an archived copy of the file — re-check anyway).
+> Everything else is ready as-is. Every code block already carries a language tag; do not strip them,
+> the bot rejects fenced blocks without one.
 
 ---
 
@@ -22,7 +32,7 @@ pagination cursor so the NAV cycle never finalises and `navStart` never returns 
 
 ## Root Cause
 
-In `PortfolioVault.sol:updateNav` <!-- LINE --> the restart branch discards all pagination progress
+In [`PortfolioVault.sol:updateNav`](https://github.com/sherlock-scoping/tare-io__tare-contracts/blob/b215321b218aac7e7fc0072d97c74e93f23bdaf7/contracts/PortfolioVault.sol#LNNN) the restart branch discards all pagination progress
 whenever the vault's NFT ownership nonce changed since the cycle began:
 
 ```solidity
@@ -43,7 +53,7 @@ whenever the vault's NFT ownership nonce changed since the cycle began:
 restart, and cleared **only** in the finalisation branch reached when `cursor >= _navLoanIds.length`.
 There is no setter, no admin reset and no guardian override.
 
-The restart condition is externally controllable because `LoansNFT.sol:_update` <!-- LINE --> bumps
+The restart condition is externally controllable because [`LoansNFT.sol:_update`](https://github.com/sherlock-scoping/tare-io__tare-contracts/blob/b215321b218aac7e7fc0072d97c74e93f23bdaf7/contracts/LoansNFT.sol#L169) bumps
 the recipient's nonce unconditionally:
 
 ```solidity
@@ -200,7 +210,7 @@ Two artefacts are provided.
 
 **1. `harness/` — 13 tests, all passing, runnable with no contest-repo dependency.**
 
-```
+```text
 $ forge test -vv
 Ran 7 tests for test/NavFreeze.t.sol:NavFreezeTest
 [PASS] test_attackerHoldsNavStartOpenIndefinitely()

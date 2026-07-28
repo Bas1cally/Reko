@@ -26,7 +26,7 @@ Zwei Stellen in `SUBMISSION.md` sind mit `<!-- LINE -->` markiert. Der bequemste
 
 Alternativ, falls du lieber auf das kanonische Scope-Repo verlinkst (Commit steht im README):
 
-```
+```text
 https://github.com/sherlock-scoping/tare-io__tare-contracts/blob/b215321b218aac7e7fc0072d97c74e93f23bdaf7/contracts/PortfolioVault.sol#L<Nummer>
 https://github.com/sherlock-scoping/tare-io__tare-contracts/blob/b215321b218aac7e7fc0072d97c74e93f23bdaf7/contracts/LoansNFT.sol#L<Nummer>
 ```
@@ -85,7 +85,7 @@ Erst dieser Vorspann, **wörtlich**:
 > `test_boundary_singleTransactionSweepIsImmune` demonstrates the precondition by showing the attack
 > failing against an atomic sweep.
 >
-> ```
+> ```bash
 > forge init poc && cd poc
 > git clone --depth 1 https://github.com/foundry-rs/forge-std.git lib/forge-std
 > # paste the file below into test/NavFreeze.t.sol
