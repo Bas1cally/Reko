@@ -82,6 +82,55 @@ override**. The assert runs from `assert_invariants` on both `modify_position` *
 Section 1 is what makes this more than theoretical: the march to the ceiling can be driven up to
 7× faster than the documented half-life implies, for gas.
 
+## 4. THE ACTUAL DEFECT — found by digging for a theft path, and it is not a theft
+
+Trying to turn section 1 into value extraction produced a sharper and *different* bug, plus the
+reason it cannot be weaponised. Both belong in the record.
+
+**`calculate_rate_accumulator` applies the end-of-interval rate retroactively to the whole interval.**
+`rate_accumulator()` computes `next_full_utilization_rate` first — fully decayed or grown over the
+entire `time_delta` — derives `interest_rate` from it, and only then calls
+`calculate_rate_accumulator(last_updated, last_rate_accumulator, interest_rate)`, which compounds
+that single rate across every second since `last_updated`. The correct treatment integrates the rate
+over the interval. This one prices the whole interval at its endpoint.
+
+In the decay regime (utilization below `min_target_utilization`) the endpoint is the *lowest* rate of
+the interval, so the longer the gap between updates, the more the protocol **undercharges borrowers
+and underpays lenders**. Measured with the project's own `test_interest_rate_config`
+(`rate_half_life` 2 days, max 101.39% APR, min 4.99% APR), 50% utilization, $10M of debt:
+
+| period | interest if left alone | interest if poked every block | shortfall to lenders |
+|---|---|---|---|
+| 7 days | $11,104 | $13,964 | $2,860 |
+| 14 days | $15,029 | $18,896 | $3,867 |
+| 30 days | $19,506 | $23,607 | $4,101 |
+| 60 days | $24,582 | $31,928 | **$7,346 (−23%)** |
+
+### Why this is not theft, and why I am not going to dress it up as one
+
+Three separate checks, each confirmed against source rather than assumed:
+
+1. **The manipulable direction is the harmless one.** Anyone can *shrink* the gap by poking; nobody
+   can *lengthen* it. Poking moves the result **toward** the correct integral — the "attacker" would
+   be repairing the undercharge, not exploiting it. The party who benefits from the defect (the
+   borrower) benefits by doing nothing, which is not an attack.
+2. **The flash-loan utilization spike is dead.** `calculate_utilization(asset_config.reserve, …)`
+   reads the *bookkeeping* reserve, and `flash_loan` moves only real tokens — it never touches
+   `asset_config.reserve`. A flash loan therefore does not move utilization at all.
+3. **Spike-then-price in one transaction is impossible.** `context()` reads the stored config and
+   computes the new accumulator *before* `update_position` applies any deltas, so the utilization
+   used is always the pre-transaction value. And the spike transaction itself sets
+   `last_updated = now`, so the following interval starts from zero elapsed time.
+
+The growth regime would overcharge borrowers the same way, and that *would* be extractable — but
+`max_target_utilization = 99_999` out of 100_000 means it only engages above **99.999%** utilization,
+which requires the reserve to be essentially empty. Unreachable in practice.
+
+So the honest classification is a **systematic value leak from lenders to borrowers in quiet pools**,
+not an attacker-driven theft. Vesu's programme pays for theft (≥1% TVL) or freezing; it has no
+category for this. Submitting it as theft would be the kind of fantasy this engagement was told to
+avoid, and a judge would take it apart in one paragraph.
+
 ## Honest severity assessment
 
 The mechanism is solid. The severity mapping is where this is weak, and the submission must say so:
