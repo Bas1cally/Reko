@@ -20,8 +20,12 @@
 > predating the programme qualifies. That puts the decision with them and keeps the disclosure clean.
 >
 > Two further notes for whoever picks this up:
-> - **Submitting to Sherlock's bug bounty platform requires a 250 USDC deposit.** For a finding the
->   team already has, that is a bad bet regardless of the refund rules — which are not verified here.
+> - **The 250 USDC deposit would be lost, and that is now documented rather than assumed.** Sherlock's
+>   platform rules state the stake is refunded when an issue is valid, but also that *"publicly known
+>   bugs or bugs reported in a previous audit are never eligible for payout **or reimbursement of
+>   deposit**."* This finding was emailed to `security@vesu.xyz` before the programme opened, so it is
+>   known to the team: submitting it would forfeit the 250 with no upside. (Quoted from search
+>   snippets — `docs.sherlock.xyz` is 403 to the fetcher here — so confirm on the platform first.)
 > - **Severity ceiling is High, not Critical.** Critical needs ≥10% of TVL, High ≥1%. A single
 >   liquidation clears neither on its own; the case rests on repeatability. High pays 1,000–10,000 USD.
 > - **Expect the "design choice" objection.** The programme lists *"Instant bad debt socialization

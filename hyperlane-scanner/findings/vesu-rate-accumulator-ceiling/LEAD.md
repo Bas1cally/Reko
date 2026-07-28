@@ -2,7 +2,18 @@
 
 **Target**: `vesuxyz/vesu-v2` @ `e14d772` — `src/interest_rate_model.cairo`, `src/pool.cairo`,
 `src/common.cairo`. Read from a fresh public clone, not from memory or a mirror.
-**Programme**: Sherlock bug bounty, live 27 Jul 2026, max 50,000 USDC, 250 USDC submission deposit.
+**Programme**: Sherlock bug bounty, live 27 Jul 2026, max 50,000 USDC.
+
+> **Correction on the 250 USDC (28 Jul).** Earlier notes in this directory treated it as a fee and
+> used it as a reason not to submit. It is **collateral, not a cost**: per Sherlock's platform rules,
+> the stake is *"refunded if the issue is valid"*. So the deposit is not the barrier — the validity
+> odds are. What the rules **do** say, and what actually matters here, is that
+> *"publicly known bugs or bugs reported in a previous audit are never eligible for payout or
+> reimbursement of deposit"* — which is a hard exclusion for the bad-debt finding that was already
+> emailed to the team, and does **not** apply to this one, which has never been disclosed.
+> Escalating a judge's invalid ruling costs a further $1k.
+> Source caveat: `docs.sherlock.xyz` returns 403 to the fetcher available here, so these are quoted
+> from search-result snippets, not read at source. Verify on the platform before staking.
 **Status**: mechanism **confirmed end to end against source and quantified**. Severity mapping is the
 open question — see the honest assessment at the bottom. Not yet submitted.
 
