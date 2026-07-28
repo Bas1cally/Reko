@@ -1,0 +1,24 @@
+Push Chain SVM Gateway — StoredIxData squat-and-close PoC
+=========================================================
+Runs against the REAL compiled program (universal_gateway.so) in LiteSVM.
+Nothing is reimplemented.
+
+1. Build the gateway program to BPF (from the repo at commit
+   5a23518e934cae186c3929f5e5bb736e7e11b574):
+
+     cd contracts/svm-gateway
+     cargo-build-sbf --manifest-path programs/universal-gateway/Cargo.toml
+     # -> produces contracts/svm-gateway/target/deploy/universal_gateway.so
+
+2. Put poc.rs + Cargo.toml into a cargo project placed next to the gateway
+   checkout, so the relative path in poc.rs resolves to universal_gateway.so:
+
+     poc.rs reads:
+       "/../pushchain/contracts/svm-gateway/target/deploy/universal_gateway.so"
+     Adjust that one path to wherever your .so is.
+
+3. Run:
+     cargo run --release
+
+Expected output is in RESULTS.txt. All assertions pass; net attacker cost is
+40,000 lamports (transaction fees only — rent is refunded on every close).
