@@ -1,0 +1,15 @@
+== Push Chain StoredIxData squat-and-close PoC (real compiled program) ==
+stored_ix_data PDA: Ai8jqwNpa9G6Dk7DpxDpSRcFhDWa3jVLXy26ZR57kZjQ
+[1] attacker occupied the slot (no privileged role, no TSS signature)
+[2] relayer's own store of the same slot FAILED (init on a live account)
+[3] attacker closed the slot, refunded 9773800 lamports of rent
+[4.0] re-occupied and released again; slot empty
+[4.1] re-occupied and released again; slot empty
+[4.2] re-occupied and released again; slot empty
+
+>>> attacker held the ref-route slot across 4 store/close cycles.
+>>> net attacker cost: 40000 lamports (tx fees only; rent recovered every cycle).
+>>> the ref-finalize route can never find its ix_data, and for any finalize tx over
+>>> 1232 bytes the ref route is the only route -> permanent lockout of the execute.
+
+ALL ASSERTIONS PASSED
