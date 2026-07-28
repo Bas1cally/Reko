@@ -217,3 +217,70 @@ programme's likelihood bar demands none. If both survive verification, submit Le
 and mention Lead 1 separately — the pool is split per unique issue, so two distinct valid findings
 are worth more than one, and with only 3 hackers registered the marginal value of a second unique
 issue is high.
+
+---
+
+## LEAD 2 — verification results (28 Jul). All three questions answered, all in favour.
+
+**Q1 — is there an inline fallback that routes around the squat?** Yes, but it does not save the
+victim. `docs/6-TX-SIZE-REF-ROUTE.md` states the constraint outright:
+
+> "Solana enforces a 1232-byte hard limit on legacy transactions… For execute payloads above roughly
+> 900 bytes, the transaction exceeds the limit and Solana rejects it before the program runs."
+>
+> | Serialized finalize tx ≤ 1232 bytes | Direct `finalize_universal_tx` |
+> | Serialized finalize tx > 1232 bytes | Store + `finalize_universal_tx_with_ix_data_ref` |
+
+So for any outbound execute whose finalize transaction exceeds 1232 bytes — driven by payload size
+*and* the number of remaining accounts — the ref route is the **only** route. The squat blocks the
+only path. The report must carry this qualifier: the lock applies to large-payload executes, not to
+every transaction.
+
+**Q2 — is the intent knowable before the relayer broadcasts, or is this front-running?**
+Pre-registration, not front-running. `INTEGRATION_GUIDE.md:64` requires the identifier to be
+derivable rather than random:
+
+> "`sub_tx_id`: 32 bytes - **MUST be deterministic and stable across retries** (no random generation)
+> **Recommended**: Use source transaction hash or hash of event fields
+> (e.g. `keccak256(event_tx_hash || log_index)`)"
+
+Both inputs come from a **public source-chain event**, and `ix_data` is built from the same public
+event fields. An attacker watching the source chain computes `(sub_tx_id, ix_data_hash)` and occupies
+the slot before the relayer has begun. Acting on public information ahead of a known process is not
+front-running, and the programme's exclusion does not reach it. **Pre-empt this objection explicitly
+in the submission — it is the one a triager will reach for first.**
+
+**Q3 — does pre-storing identical bytes break the relayer, or only the close?**
+Moot: the close primitive alone suffices. The attacker holds `store_refund_recipient` and may close
+at any moment before `ExecutedSubTx` exists, so they simply close ahead of each finalize attempt.
+Whether the relayer's own store fails is irrelevant to the outcome.
+
+**Not a known issue.** Grepping every document for squat / grief / DoS / front-run / "anyone can
+store" returns only admin-fee griefing and pause griefing in `THREAT_MODEL.md`. The adversarial
+storer appears nowhere. The programme excludes "known issues in README.md" and on the GitHub tracker;
+this is in neither.
+
+**The design assumes an honest storer, and says so.** `docs/6-TX-SIZE-REF-ROUTE.md` §"Multi-UV Model"
+contemplates the storing and finalizing parties being different, and the close-policy table lists
+only benign reasons for a pre-execution close ("finalize failed", "UV aborts"). A storer who took the
+slot precisely to hold it hostage is not considered anywhere.
+
+### Status: this clears every criterion the programme sets
+
+| Programme criterion | Status |
+|---|---|
+| No privileged role required | `store_execute_ix_data` has zero authorisation |
+| No significant balance or funding | rent is refunded on every close — docs: *"Rent is always recoverable"* |
+| No computational resources or extended time | two ordinary transactions per cycle |
+| Limited number of conditions | one: the finalize tx exceeds 1232 bytes |
+| Permanent lockout of end-user funds | outbound execute can never complete |
+
+### What remains before submitting
+
+1. **Build the runnable PoC.** Mandatory — a report without one is closed and costs reputation.
+   `cargo` and `rustc` are present, `anchor` and `solana` CLI are not, so LiteSVM in-process is the
+   route. This is the bulk of the remaining work and it is mine, not the user's.
+2. Confirm the exact size threshold empirically rather than quoting the doc's "roughly 900 bytes".
+3. Write the fix (required at submission): require a TSS signature over `(sub_tx_id, ix_data_hash)`
+   in `store_execute_ix_data`, or remove the pre-execution close branch so the slot cannot be
+   revoked once taken.
