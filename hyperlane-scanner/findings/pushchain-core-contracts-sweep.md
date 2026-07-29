@@ -1,75 +1,75 @@
-# Push Chain Core Contracts SC — permissionless-surface sweep
+# Push Chain Core Contracts SC — full sweep at the exact scope commit
 
 Program: HackenProof "Push Chain — Core Contracts SC" ($10k, 7 submissions).
-Repo: `pushchain/push-chain-core-contracts` @ `86e20e2` (main, 2026-03-17,
-aligns with the "Last audit: Hacken — Mar 2026" note). Scope also names
-`programs/pushsolanalocker/src/lib.rs` and `IAMMInterface.sol`, which live in a
-separate repo (see "Unreachable asset" below).
+**Scope repo/commit (authoritative, from the program page):**
+`pushchain/push-chain-core-contracts` @ **`a2b61850d765679aa9e1e39998a47a348404bc08`**
+("bug-fix-l1 setter functions", 2026-05-07). Private repo; the session git proxy
+has read access (unauth browser gets 404/403).
 
-Method: read `docs/THREAT_MODELLING_DOC.md` first (12 contracts, full STRIDE
-tables, two disclosed findings F-01/F-02 + "additional observations"), then hunt
-the crook shape it does NOT cover: a permissionless writer/initializer to state
-that gates funds, a one-way lock an outsider trips, or sig-verify that fails open.
+> Note: `pushsolanalocker` / `IAMMInterface` were a red herring from a mixed
+> asset paste — they are NOT in this program's scope. The real scope is the 15
+> Solidity files below, all in this repo at this commit.
 
-## Contracts read in full
-- `src/uea/UEA_EVM.sol` (322 L) — ECDSA EIP-712 execute
-- `src/uea/UEA_SVM.sol` (339 L) — Ed25519 precompile execute
-- `src/uea/UEAFactory.sol` (294 L) — CREATE2 deploy + registry
-- `src/PRC20.sol` (261 L) — custom synthetic ERC-20
+## In-scope assets (all read at a2b61850)
+CEA.sol, CEAFactory.sol, CEAMigration.sol, CEAProxy.sol, PRC20.sol, UEA_EVM.sol,
+UEA_SVM.sol, UEAFactory.sol, UEAMigration.sol, UEAProxy.sol, UniversalCore.sol,
+WPC.sol, Utils.sol, Types.sol, Errors.sol.
 
-## Crook hypotheses tested — all closed
-1. **UEA account-hijack via permissionless `initialize`** (top hypothesis).
-   `UEA_EVM/SVM.initialize(id, factory)` is guarded only by a `bool _initialized`
-   (not OZ `initializer`) and is externally callable. IF `deployUEA` deployed the
-   proxy without atomically initializing it, an attacker could initialize a
-   victim's freshly-cloned UEA with `owner = attacker` and drain everything sent
-   to that address. **Closed:** `UEAFactory.deployUEA` (`:180-187`) does
-   `cloneDeterministic(salt)` → `initializeUEA(impl)` → `initialize(_id, this)`
-   **atomically in one tx**, and the CREATE2 salt is `keccak256(abi.encode(_id))`
-   — the address is derived from the *full* id including `owner`, so an
-   attacker-owner id produces a *different* address. There is no victim-address /
-   attacker-owner pairing. No hijack window.
-2. **Signature replay within a deployment.** `getUniversalPayloadHash` binds the
-   contract-storage `nonce`; `_handleExecution` does `nonce++`. Same signature
-   never verifies twice. Closed. (Cross-*deployment* replay is disclosed F-02.)
-3. **Signed-payload mutation.** EIP-712 struct binds `to`, `value`,
-   `keccak256(data)`, gas fields, `nonce`, `deadline`, `vType`. Multicall
-   `to/value/data` live inside `data`, so they are covered by the hash. Nothing
-   executable is left unsigned. Closed.
-4. **UEA_SVM Ed25519 fail-open.** `_verifySignatureSVM` staticcalls the
-   precompile and `revert`s on `!success`, then `abi.decode(result,(bool))`.
-   Fails **closed** on every error path (revert or false). No fail-open. Closed.
-5. **ECDSA `recover` == address(0) match.** OZ `ECDSA.recover` reverts on a
-   malformed/zero signature (does not return address(0)), so an `owner == 0`
-   match is impossible. Closed.
-6. **PRC20 permissionless mint / reentrancy.** `deposit` (mint) is gated to
-   `UNIVERSAL_CORE`/`UE_MODULE`; `burn` only burns caller's own balance;
-   `transferFrom` reverts-and-unwinds on low allowance with no external hook.
-   No permissionless inflation or reentrancy. Closed.
-7. **UEAProxy slot-0 / OZ Initializable overlap** (additional-observation).
-   Re-init would need slot 0 to read zero after `initialize`; `_universalAccountId`
-   starts with a non-empty `chainNamespace` for any registered chain, so slot 0
-   is non-zero. An empty namespace would require an admin-registered empty chain
-   — not permissionless. Closed.
+## Key fact: this is a POST-FIX commit
+Both findings disclosed in the repo's own `THREAT_MODELLING_DOC.md` are already
+FIXED at a2b61850:
+- **F-02** (UEA domain separator omitted Push Chain id → cross-deployment replay):
+  fixed — `domainSeparator()` now encodes `bytes32(block.chainid)` as the EIP-712
+  `salt` in both UEA_EVM (`:94`) and UEA_SVM (`:101`).
+- **F-01** (CEA ERC20 outbound missing approval → token lock): fixed —
+  `CEA.sendUniversalTxToUEA` now does `approve(gateway, amount)` → call →
+  `approve(gateway, 0)` (`CEA.sol:142-144`).
+
+Re-submitting either would be a known/fixed dupe → out of scope.
+
+## Permissionless surface — the only Critical-eligible attack class
+Critical here requires "no privileged role." At a2b61850 the *only* permissionless
+entrypoints are: `UEAFactory.deployUEA`, `UEA.executeUniversalTx` (sig path),
+`UEA.initialize`, PRC20 (`burn`/`transfer`/`approve`), WPC (`deposit`/`withdraw`),
+and `UniversalCore.receive()`. Everything else (all of CEA/CEAFactory, every
+UniversalCore operational fn and setter, the migrations) is gated to
+VAULT / UNIVERSAL_EXECUTOR_MODULE / gatewayPC / an admin role — privileged, hence
+not Critical-eligible, and "rogue privileged users" are explicitly out of scope.
+
+## Crook hypotheses tested at a2b61850 — all closed
+1. **UEA/CEA account-hijack via permissionless `initialize`.** Both
+   `UEAFactory.deployUEA` (`:201-208`) and `CEAFactory.deployCEA` (`:178-185`)
+   do clone → proxy-init → logic-init **atomically in one tx**, and the CREATE2
+   salt is `keccak256(id)` / `keccak256(pushAccount)` — the address is derived
+   from the owner identity, so there is no victim-address / attacker-owner pair
+   and no pre-init window (no code at the address before the atomic deploy).
+2. **Signature replay / mutation (UEA).** Struct hash binds `to`,`value`,
+   `keccak(data)`, gas fields, storage `nonce`, `deadline`, `vType`; domain binds
+   source chainId + this proxy + `block.chainid`. `executeUniversalTx` also checks
+   `payload.nonce == nonce`. Same sig never verifies twice; multicall targets live
+   inside signed `data`. Closed.
+3. **UEA_SVM Ed25519 fail-open.** `_verifySignatureSVM` reverts on `!success`,
+   else `abi.decode(result,(bool))` — fails closed on every path. Closed.
+4. **Proxy logic-slot takeover.** `UEAProxy.initializeUEA` / `CEAProxy` are
+   OZ-`initializer` + slot-empty guarded; OZ v5 Initializable uses namespaced
+   storage (no slot-0 overlap with `_universalAccountId`). `UEAMigration` /
+   `CEAMigration` are `onlyDelegateCall` and write only their **immutable**
+   implementation addresses — a hostile delegatecall corrupts only the attacker's
+   own slot; a victim UEA migrates only via owner-signed payload to the
+   admin-fixed migration contract. Closed.
+5. **UniversalCore swap value-conservation.** `swapAndBurnGas` (`:223`) holds
+   `msg.value == amountInUsed + refund`, `nonReentrant`, WPC withdraw is CEI-safe;
+   refund goes to gatewayPC-supplied `caller`. No stranded/extractable value.
+6. **PRC20 / WPC.** PRC20 `deposit`(mint) gated to CORE/UE-module; `burn` only
+   caller's balance; `transferFrom` reverts-and-unwinds with no hook. WPC is a
+   CEI-safe WETH clone (balance decremented before the value call). Closed.
+7. **`stringToExactUInt256` collision.** Rejects non-digits/empty, checked-math
+   overflow revert. "01" vs "1" collide numerically but produce different salts →
+   different proxy addresses → different domain separators; chain registration is
+   admin-gated anyway. Closed.
 
 ## Verdict
-The reachable in-scope core Solidity (UEA_EVM/SVM, UEAFactory, PRC20; and
-UniversalCore, whose entire surface is `onlyUEModule`/`onlyGatewayPC`/
-`onlyManager`/`onlyAdmin` per the threat-model access table) is clean for a
-permissionless Critical **beyond the two already-disclosed findings** F-01 (CEA
-missing ERC20 approval → ERC20 lock) and F-02 (domain separator omits
-`block.chainid` → cross-deployment replay). Both are documented in the repo's own
-threat model, hence out of scope under "known issues."
-
-## Unreachable asset — the real smell
-`programs/pushsolanalocker/src/lib.rs` (Solana/Anchor, in scope) is **not covered
-by the project threat model at all** — the single highest crook-smell (in-scope +
-zero coverage + a fund-locking custody program + Rust = our proven SVM toolchain).
-An *old* `pushsolanalocker` existed in `push-chain-gateway-contracts` history at
-`contracts/svm-gateway/programs/pushsolanalocker/` but was deleted ("remove old
-svm locker", commit d20d006) — a removed contract is not "currently deployed", so
-not a valid target. The current in-scope copy (scope path `programs/pushsolanalocker
-/src/lib.rs`, root-level `programs/`, alongside `src/interfaces/IAMMInterface.sol`)
-is in a repo not present in the public `pushchain` org listing — likely private or
-under an un-guessed name. **Need: the exact repo URL from the HackenProof "Assets
-in Scope" link for `pushsolanalocker`.**
+At the exact scope commit `a2b61850`, the in-scope Core Contracts are **clean for
+a permissionless Critical**, and both disclosed findings are already fixed. This
+is a post-audit, post-fix codebase (Hacken Mar 2026). No fantasy finding will be
+manufactured (standing rule: real bugs only).
