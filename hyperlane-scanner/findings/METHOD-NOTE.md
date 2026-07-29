@@ -112,3 +112,22 @@ others were killed honestly, and the submission that went out states its own wea
 (the portfolio-size precondition, the partial exchange exit) instead of hiding them. Judges punish
 overclaiming harder than understatement, and an objection you have already answered cannot be used
 against you.
+
+## Prefer the time-boxed contest over the open bounty
+
+Learned after Push Chain (Tare-style contest + two HackenProof FlashBounty programs, all with a
+fixed audit window and a competing pool of researchers, vs. the standing/open bug bounties that
+exist alongside them): a **deadline + competition** is what actually ends the hunt. It forces
+"good enough, ship it" the moment a real, provable Critical is in hand, because every hour spent
+gold-plating one finding is an hour a competing researcher could use to find and submit a
+different one first.
+
+An **open bounty with no time limit and no visible competition** has no natural stopping point.
+Every codebase has more doors (a fresh commit, a module not yet read, a message type not yet
+traced) — without external pressure forcing a cutoff, the hunt has no reason to ever call itself
+done, and effort stops being effort-per-dollar-of-expected-value and starts being pure sunk cost.
+
+Consequence for target selection: when offered a choice between a running contest/FlashBounty
+(fixed window, visible submission count) and a standing open-scope bounty on the same protocol,
+prefer the contest — not because the bug density is different, but because the contest supplies
+the discipline an open bounty leaves entirely to us.
