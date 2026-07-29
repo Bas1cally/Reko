@@ -1,0 +1,162 @@
+=== full dmesg oom evidence ===
+[ 2289.644371] inactive_anon 156590080
+[ 2289.645204] active_anon 8192
+[ 2289.645970] inactive_file 4096
+[ 2289.646818] active_file 0
+[ 2289.647629] unevictable 0
+[ 2289.648213] hierarchical_memory_limit 157286400
+[ 2289.649155] hierarchical_memsw_limit 157286400
+[ 2289.650059] total_cache 4096
+[ 2289.650688] total_rss 156598272
+[ 2289.651426] total_rss_huge 0
+[ 2289.652072] total_shmem 0
+[ 2289.652629] total_mapped_file 0
+[ 2289.653300] total_dirty 0
+[ 2289.653851] total_writeback 0
+[ 2289.654479] total_workingset_refault_anon 0
+[ 2289.655358] total_workingset_refault_file 0
+[ 2289.656196] total_swap 0
+[ 2289.656743] total_swapcached 0
+[ 2289.657381] total_pgpgin 45487
+[ 2289.658032] total_pgpgout 7254
+[ 2289.658700] total_pgfault 47210
+[ 2289.659382] total_pgmajfault 0
+[ 2289.660080] total_inactive_anon 156590080
+[ 2289.660891] total_active_anon 8192
+[ 2289.661588] total_inactive_file 4096
+[ 2289.662330] total_active_file 0
+[ 2289.663059] total_unevictable 0
+[ 2289.663716] Tasks state (memory values in pages):
+[ 2289.664670] [  pid  ]   uid  tgid total_vm      rss rss_anon rss_file rss_shmem pgtables_bytes swapents oom_score_adj name
+[ 2289.666923] [  23668]     0 23668   457513    43653    38161     5492         0   507904        0             0 tssvictim
+[ 2289.669090] oom-kill:constraint=CONSTRAINT_MEMCG,nodemask=(null),cpuset=/,mems_allowed=0,oom_memcg=/tsspoc,task_memcg=/tsspoc,task=tssvictim,pid=23668,uid=0
+[ 2289.671870] Memory cgroup out of memory: Killed process 23668 (tssvictim) total-vm:1830052kB, anon-rss:152644kB, file-rss:21968kB, shmem-rss:0kB, UID:0 pgtables:496kB oom_score_adj:0
+
+=== attacker final log ===
+ATTACKER CONNECTED, flooding...
+FLOOD DONE opened=129813 failed=14308
+
+=== victim full stdout (heap climbing to death) ===
+PEERID 12D3KooW9xZSRq1uovS59v8ug1ZKpiWaXjVEg9o5Tnu4rwSoCRqP
+PROTOCOL /push/tss/1.0.0
+ADDR /ip4/127.0.0.1/tcp/37085/p2p/12D3KooW9xZSRq1uovS59v8ug1ZKpiWaXjVEg9o5Tnu4rwSoCRqP
+ADDR /ip4/192.0.2.2/tcp/37085/p2p/12D3KooW9xZSRq1uovS59v8ug1ZKpiWaXjVEg9o5Tnu4rwSoCRqP
+READY
+STATS goroutines=19 heap=2013032 bytes (1.9 MiB) sys=11885584 bytes (11.3 MiB)
+STATS goroutines=19 heap=2013064 bytes (1.9 MiB) sys=11885584 bytes (11.3 MiB)
+STATS goroutines=19 heap=2013536 bytes (1.9 MiB) sys=11885584 bytes (11.3 MiB)
+STATS goroutines=19 heap=2013568 bytes (1.9 MiB) sys=11885584 bytes (11.3 MiB)
+STATS goroutines=19 heap=2013600 bytes (1.9 MiB) sys=11885584 bytes (11.3 MiB)
+STATS goroutines=19 heap=2013632 bytes (1.9 MiB) sys=11885584 bytes (11.3 MiB)
+STATS goroutines=19 heap=2013664 bytes (1.9 MiB) sys=11885584 bytes (11.3 MiB)
+STATS goroutines=19 heap=2013696 bytes (1.9 MiB) sys=11885584 bytes (11.3 MiB)
+STATS goroutines=19 heap=2013728 bytes (1.9 MiB) sys=11885584 bytes (11.3 MiB)
+STATS goroutines=19 heap=2013760 bytes (1.9 MiB) sys=11885584 bytes (11.3 MiB)
+STATS goroutines=19 heap=2041808 bytes (1.9 MiB) sys=11885584 bytes (11.3 MiB)
+STATS goroutines=19 heap=2041840 bytes (1.9 MiB) sys=11885584 bytes (11.3 MiB)
+STATS goroutines=19 heap=2041872 bytes (1.9 MiB) sys=11885584 bytes (11.3 MiB)
+STATS goroutines=19 heap=2041904 bytes (1.9 MiB) sys=11885584 bytes (11.3 MiB)
+STATS goroutines=19 heap=2041936 bytes (1.9 MiB) sys=11885584 bytes (11.3 MiB)
+STATS goroutines=19 heap=2041968 bytes (1.9 MiB) sys=11885584 bytes (11.3 MiB)
+STATS goroutines=19 heap=2042000 bytes (1.9 MiB) sys=11885584 bytes (11.3 MiB)
+STATS goroutines=19 heap=2042032 bytes (1.9 MiB) sys=11885584 bytes (11.3 MiB)
+STATS goroutines=19 heap=2042064 bytes (1.9 MiB) sys=11885584 bytes (11.3 MiB)
+STATS goroutines=19 heap=2042096 bytes (1.9 MiB) sys=11885584 bytes (11.3 MiB)
+STATS goroutines=19 heap=2070144 bytes (2.0 MiB) sys=11885584 bytes (11.3 MiB)
+STATS goroutines=19 heap=2070176 bytes (2.0 MiB) sys=11885584 bytes (11.3 MiB)
+STATS goroutines=19 heap=2070208 bytes (2.0 MiB) sys=11885584 bytes (11.3 MiB)
+STATS goroutines=19 heap=2070240 bytes (2.0 MiB) sys=11885584 bytes (11.3 MiB)
+STATS goroutines=94 heap=80257040 bytes (76.5 MiB) sys=87844896 bytes (83.8 MiB)
+STATS goroutines=95 heap=85475624 bytes (81.5 MiB) sys=96233504 bytes (91.8 MiB)
+STATS goroutines=94 heap=90748824 bytes (86.5 MiB) sys=101017632 bytes (96.3 MiB)
+STATS goroutines=94 heap=96069896 bytes (91.6 MiB) sys=105211936 bytes (100.3 MiB)
+STATS goroutines=94 heap=101521408 bytes (96.8 MiB) sys=109733920 bytes (104.7 MiB)
+STATS goroutines=94 heap=106810048 bytes (101.9 MiB) sys=118188064 bytes (112.7 MiB)
+STATS goroutines=94 heap=112130792 bytes (106.9 MiB) sys=122382368 bytes (116.7 MiB)
+STATS goroutines=95 heap=117370176 bytes (111.9 MiB) sys=126642208 bytes (120.8 MiB)
+STATS goroutines=95 heap=122652784 bytes (117.0 MiB) sys=135292960 bytes (129.0 MiB)
+STATS goroutines=94 heap=128307792 bytes (122.4 MiB) sys=139552800 bytes (133.1 MiB)
+STATS goroutines=95 heap=133533048 bytes (127.3 MiB) sys=143815728 bytes (137.2 MiB)
+STATS goroutines=94 heap=81157704 bytes (77.4 MiB) sys=144012336 bytes (137.3 MiB)
+STATS goroutines=94 heap=86014936 bytes (82.0 MiB) sys=144012336 bytes (137.3 MiB)
+STATS goroutines=94 heap=91266616 bytes (87.0 MiB) sys=144077872 bytes (137.4 MiB)
+STATS goroutines=95 heap=96487368 bytes (92.0 MiB) sys=144077872 bytes (137.4 MiB)
+STATS goroutines=95 heap=101652680 bytes (96.9 MiB) sys=144143408 bytes (137.5 MiB)
+STATS goroutines=94 heap=106927824 bytes (102.0 MiB) sys=144143408 bytes (137.5 MiB)
+STATS goroutines=94 heap=112358664 bytes (107.2 MiB) sys=144208944 bytes (137.5 MiB)
+STATS goroutines=94 heap=117584056 bytes (112.1 MiB) sys=144208944 bytes (137.5 MiB)
+STATS goroutines=94 heap=122524592 bytes (116.8 MiB) sys=144274480 bytes (137.6 MiB)
+STATS goroutines=94 heap=127757208 bytes (121.8 MiB) sys=144274480 bytes (137.6 MiB)
+STATS goroutines=95 heap=133002968 bytes (126.8 MiB) sys=144340016 bytes (137.7 MiB)
+STATS goroutines=94 heap=138284176 bytes (131.9 MiB) sys=148829232 bytes (141.9 MiB)
+STATS goroutines=94 heap=143513024 bytes (136.9 MiB) sys=157545520 bytes (150.2 MiB)
+STATS goroutines=94 heap=149043480 bytes (142.1 MiB) sys=161739824 bytes (154.2 MiB)
+STATS goroutines=94 heap=79999720 bytes (76.3 MiB) sys=162198576 bytes (154.7 MiB)
+STATS goroutines=95 heap=85320488 bytes (81.4 MiB) sys=162264112 bytes (154.7 MiB)
+STATS goroutines=94 heap=90664632 bytes (86.5 MiB) sys=162264112 bytes (154.7 MiB)
+STATS goroutines=94 heap=96209192 bytes (91.8 MiB) sys=162329648 bytes (154.8 MiB)
+STATS goroutines=95 heap=101457320 bytes (96.8 MiB) sys=162329648 bytes (154.8 MiB)
+STATS goroutines=95 heap=88750048 bytes (84.6 MiB) sys=174978096 bytes (166.9 MiB)
+STATS goroutines=94 heap=93881000 bytes (89.5 MiB) sys=174978096 bytes (166.9 MiB)
+STATS goroutines=95 heap=99252224 bytes (94.7 MiB) sys=174978096 bytes (166.9 MiB)
+STATS goroutines=94 heap=104499936 bytes (99.7 MiB) sys=174978096 bytes (166.9 MiB)
+STATS goroutines=94 heap=109970896 bytes (104.9 MiB) sys=174978096 bytes (166.9 MiB)
+STATS goroutines=94 heap=78020064 bytes (74.4 MiB) sys=174978096 bytes (166.9 MiB)
+STATS goroutines=94 heap=83354808 bytes (79.5 MiB) sys=174978096 bytes (166.9 MiB)
+STATS goroutines=94 heap=87647560 bytes (83.6 MiB) sys=174978096 bytes (166.9 MiB)
+STATS goroutines=95 heap=92853568 bytes (88.6 MiB) sys=174978096 bytes (166.9 MiB)
+STATS goroutines=95 heap=98346160 bytes (93.8 MiB) sys=174978096 bytes (166.9 MiB)
+STATS goroutines=96 heap=103800032 bytes (99.0 MiB) sys=174978096 bytes (166.9 MiB)
+STATS goroutines=94 heap=109141904 bytes (104.1 MiB) sys=174978096 bytes (166.9 MiB)
+STATS goroutines=95 heap=114575808 bytes (109.3 MiB) sys=174978096 bytes (166.9 MiB)
+STATS goroutines=95 heap=119960776 bytes (114.4 MiB) sys=174978096 bytes (166.9 MiB)
+STATS goroutines=94 heap=125476104 bytes (119.7 MiB) sys=174978096 bytes (166.9 MiB)
+STATS goroutines=95 heap=130223008 bytes (124.2 MiB) sys=174978096 bytes (166.9 MiB)
+STATS goroutines=95 heap=135696904 bytes (129.4 MiB) sys=174978096 bytes (166.9 MiB)
+STATS goroutines=94 heap=79117968 bytes (75.5 MiB) sys=174978096 bytes (166.9 MiB)
+STATS goroutines=94 heap=84201328 bytes (80.3 MiB) sys=174978096 bytes (166.9 MiB)
+STATS goroutines=94 heap=89651808 bytes (85.5 MiB) sys=174978096 bytes (166.9 MiB)
+STATS goroutines=95 heap=95034240 bytes (90.6 MiB) sys=174978096 bytes (166.9 MiB)
+STATS goroutines=95 heap=100322072 bytes (95.7 MiB) sys=174978096 bytes (166.9 MiB)
+STATS goroutines=95 heap=105635408 bytes (100.7 MiB) sys=174978096 bytes (166.9 MiB)
+STATS goroutines=94 heap=111194528 bytes (106.0 MiB) sys=174978096 bytes (166.9 MiB)
+STATS goroutines=95 heap=116608536 bytes (111.2 MiB) sys=174978096 bytes (166.9 MiB)
+STATS goroutines=95 heap=122072280 bytes (116.4 MiB) sys=174978096 bytes (166.9 MiB)
+STATS goroutines=94 heap=127405432 bytes (121.5 MiB) sys=174978096 bytes (166.9 MiB)
+STATS goroutines=95 heap=132741032 bytes (126.6 MiB) sys=174978096 bytes (166.9 MiB)
+STATS goroutines=94 heap=76162552 bytes (72.6 MiB) sys=174978096 bytes (166.9 MiB)
+STATS goroutines=95 heap=81709080 bytes (77.9 MiB) sys=174978096 bytes (166.9 MiB)
+STATS goroutines=94 heap=94177120 bytes (89.8 MiB) sys=187561008 bytes (178.9 MiB)
+STATS goroutines=94 heap=99673656 bytes (95.1 MiB) sys=187561008 bytes (178.9 MiB)
+STATS goroutines=94 heap=103033336 bytes (98.3 MiB) sys=187561008 bytes (178.9 MiB)
+STATS goroutines=95 heap=108417304 bytes (103.4 MiB) sys=187561008 bytes (178.9 MiB)
+STATS goroutines=95 heap=112763536 bytes (107.5 MiB) sys=187561008 bytes (178.9 MiB)
+STATS goroutines=94 heap=118232512 bytes (112.8 MiB) sys=187561008 bytes (178.9 MiB)
+STATS goroutines=94 heap=123560680 bytes (117.8 MiB) sys=187561008 bytes (178.9 MiB)
+STATS goroutines=94 heap=129067576 bytes (123.1 MiB) sys=187561008 bytes (178.9 MiB)
+STATS goroutines=94 heap=134516096 bytes (128.3 MiB) sys=187561008 bytes (178.9 MiB)
+STATS goroutines=95 heap=79871576 bytes (76.2 MiB) sys=187561008 bytes (178.9 MiB)
+STATS goroutines=94 heap=84082400 bytes (80.2 MiB) sys=187561008 bytes (178.9 MiB)
+STATS goroutines=94 heap=89309544 bytes (85.2 MiB) sys=187561008 bytes (178.9 MiB)
+STATS goroutines=94 heap=94708848 bytes (90.3 MiB) sys=187561008 bytes (178.9 MiB)
+STATS goroutines=94 heap=99954096 bytes (95.3 MiB) sys=187561008 bytes (178.9 MiB)
+STATS goroutines=94 heap=105312976 bytes (100.4 MiB) sys=187561008 bytes (178.9 MiB)
+STATS goroutines=94 heap=110593648 bytes (105.5 MiB) sys=187561008 bytes (178.9 MiB)
+STATS goroutines=94 heap=115902736 bytes (110.5 MiB) sys=187561008 bytes (178.9 MiB)
+STATS goroutines=95 heap=121409616 bytes (115.8 MiB) sys=187561008 bytes (178.9 MiB)
+STATS goroutines=94 heap=126734512 bytes (120.9 MiB) sys=187561008 bytes (178.9 MiB)
+STATS goroutines=94 heap=132115032 bytes (126.0 MiB) sys=187561008 bytes (178.9 MiB)
+STATS goroutines=94 heap=137488808 bytes (131.1 MiB) sys=187561008 bytes (178.9 MiB)
+STATS goroutines=95 heap=143046104 bytes (136.4 MiB) sys=187561008 bytes (178.9 MiB)
+STATS goroutines=95 heap=148354304 bytes (141.5 MiB) sys=187561008 bytes (178.9 MiB)
+STATS goroutines=94 heap=81216208 bytes (77.5 MiB) sys=187561008 bytes (178.9 MiB)
+STATS goroutines=95 heap=86323240 bytes (82.3 MiB) sys=187561008 bytes (178.9 MiB)
+STATS goroutines=94 heap=91747680 bytes (87.5 MiB) sys=187561008 bytes (178.9 MiB)
+STATS goroutines=95 heap=97083872 bytes (92.6 MiB) sys=187561008 bytes (178.9 MiB)
+STATS goroutines=94 heap=102717784 bytes (98.0 MiB) sys=187561008 bytes (178.9 MiB)
+STATS goroutines=95 heap=108020800 bytes (103.0 MiB) sys=187561008 bytes (178.9 MiB)
+STATS goroutines=94 heap=113258080 bytes (108.0 MiB) sys=187561008 bytes (178.9 MiB)
+
+=== process table check post-mortem ===
+  PID STAT CMD
+victim process confirmed absent from process table
