@@ -107,6 +107,39 @@ own `DERIVED_TRANSACTIONS.md`:
   (repo's own words). Check every module-sender call site for nonce-stomp.
 - **`gasless=true`** suppresses the receipt gas field (accounting blind spot).
 
+## PoC RESULT — amplification hypothesis DISPROVEN (measured)
+
+Wrote a runnable test against the in-scope fork (`push-chain-evm` @ 96231e7),
+`tests/integration/x/vm/test_gas_metering_poc.go`, run via
+`cd evmd && go test -tags=test ./tests/integration/ -run
+TestKeeperTestSuite/TestPoCDerivedCallCosmosGasNotMetered -v`. It calls
+`DerivedEVMCallWithData` and compares EVM `res.GasUsed` to the surrounding
+`ctx.GasMeter().GasConsumed()` delta:
+
+```
+[balanceOf] EVM res.GasUsed=24302    cosmos ctx.GasMeter delta=94850     (EVM/cosmos 0.3x)
+[deploy]    EVM res.GasUsed=1883312  cosmos ctx.GasMeter delta=2246460   (EVM/cosmos 0.8x)
+```
+
+The cosmos gas-meter delta is **>= the EVM gas used** in both cases. => the EVM
+computational gas IS charged to the cosmos (block) gas meter. A gasless
+`MsgExecutePayload` is therefore bounded by its declared gas and the block gas
+limit exactly like any other tx — **there is no un-metered CPU amplification.**
+The sharp DoS Critical does not exist.
+
+What remains is only the *soft* feeless angle: gasless msg types skip the fee, so
+an attacker can occupy block gas at zero fee-cost. This is (a) bounded by the block
+gas limit (no more work than any block can do) and (b) an intentional feature
+(validator votes + UEA onboarding). Very likely triaged as known/by-design. **Not
+submitting as Critical** — real bugs only; the measurement killed the fantasy.
+
+## Value retained
+- The fork test harness now builds and runs here
+  (`cd evmd && go test -tags=test ./tests/integration/...`). This is a reusable
+  rig for runnable PoCs against any `push-chain-evm` (x/vm, precompiles) finding.
+- Door philosophy: this door held under measurement. Move to the next door
+  (see below) — do not force a fantasy through a door the PoC proved solid.
+
 ## Honest severity read
 Real, permissionless, zero-cost, repeatable — fits the L1 DoS Critical wording.
 BUT gasless is a deliberate feature; triage may treat "gasless msgs can be

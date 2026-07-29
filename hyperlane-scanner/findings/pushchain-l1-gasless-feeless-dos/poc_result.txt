@@ -1,0 +1,10 @@
+=== RUN   TestKeeperTestSuite
+=== RUN   TestKeeperTestSuite/TestPoCDerivedCallCosmosGasNotMetered
+    test_gas_metering_poc.go:47: [balanceOf] EVM res.GasUsed=24302  cosmos ctx.GasMeter delta=94850
+    test_gas_metering_poc.go:66: [deploy]    EVM res.GasUsed=1883312  cosmos ctx.GasMeter delta=2246460
+    test_gas_metering_poc.go:70: >>> RATIO balanceOf: EVM/cosmos = 0.3x
+    test_gas_metering_poc.go:71: >>> RATIO deploy:    EVM/cosmos = 0.8x
+--- PASS: TestKeeperTestSuite (0.30s)
+    --- PASS: TestKeeperTestSuite/TestPoCDerivedCallCosmosGasNotMetered (0.30s)
+PASS
+ok  	github.com/cosmos/evm/evmd/tests/integration	0.412s
