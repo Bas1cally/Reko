@@ -131,3 +131,27 @@ Consequence for target selection: when offered a choice between a running contes
 (fixed window, visible submission count) and a standing open-scope bounty on the same protocol,
 prefer the contest — not because the bug density is different, but because the contest supplies
 the discipline an open bounty leaves entirely to us.
+
+## Reading is not enough — the Tare NFT-nonce lesson
+
+Checked the public Sherlock findings after the Tare contest opened up: many other reports
+independently found the exact same bug we submitted (`LoansNFT._update` bumping
+`ownershipNonce` unconditionally → `updateNav`'s restart branch never converges), down to the
+same three cited lines and the same fix. Real bug, correctly reasoned — and still landed in a
+large duplicate cluster, because it was reachable by reading the code carefully and connecting
+two functions. That is exactly the class of bug an LLM-assisted reviewer converges on from static
+reading alone, so every other researcher running Claude (or similar) over the same two files
+found the same thing. Careful reading alone does not produce a differentiated finding; it
+produces the median finding.
+
+Push Chain's two Criticals were different in kind, not just in target: both survived an attempt
+to *disprove* them (the first hypothesis on the derived-call bug was wrong and got killed by a
+measurement before the real bug turned up on the failure path; the stream-flood claim wasn't
+accepted until it produced an actual kernel OOM-kill, not just heap growth). That extra step —
+build a real harness, try to break your own hypothesis, escalate until the result is undeniable —
+is exactly what a reading-only pass skips, and skipping it is what most other researchers
+(AI-assisted or not) also do under contest time pressure. It is the differentiator, not the
+initial spot.
+
+Consequence: treat "I found something by reading" as a hypothesis, not a finding. The bar for
+"submit" should be "I ran something that proves it," not "I can explain why it should be true."
