@@ -1,3 +1,13 @@
+## Aim for the kill
+
+The one-line version of everything below: don't stop at "plausible," stop at "undeniable."
+Tare's NFT-nonce bug was true and stayed in a duplicate cluster because reading-and-reasoning
+was where it stopped. Push Chain's two Criticals stood alone because they didn't stop there — one
+survived killing its own first hypothesis with a measurement, the other survived only once it
+produced an actual kernel OOM-kill instead of "heap grew a lot." A finding that's merely correct
+gets split with everyone else who was also merely correct. A finding driven to the kill — a
+passing test, a crashed process, a quantified number nobody can argue with — doesn't.
+
 # Method note — reachability before maths
 
 Learned the hard way on the Kamino order-bonus finding: a wrong formula is not
