@@ -63,6 +63,50 @@ fee-paying users are starved. Sustained → "inability to process new txs."
 3. Confirm `cosmosante.NewMinGasPriceDecorator` also skips gasless (else 0-fee
    gasless txs would be rejected there first — which would *reduce* the surface).
 
+## The amplification thread (raises this from "spam" to clean Critical)
+
+The EVM work in the gasless path runs through the fork's derived-tx primitive
+(`push-chain-evm` @ `96231e7`, in scope):
+`x/vm/keeper/call_evm.go :DerivedEVMCallWithData`.
+
+- It builds a `core.Message{GasLimit: gasCap, GasFeeCap:0, GasTipCap:0, GasPrice:0}`
+  and runs `ApplyMessageWithConfig(tmpCtx, msg, ...)` where `tmpCtx` is a
+  `ctx.CacheContext()`.
+- `gasCap` for `CallUEAExecutePayload` = the payload's `GasLimit` (line 193-195),
+  and for module-sender writes = estimate/DefaultGasCap.
+- **Open, decisive question:** is the EVM gas consumed by `ApplyMessageWithConfig`
+  charged back to the *outer cosmos block gas meter* of the (gasless, ~0-fee)
+  `MsgExecutePayload`? Standard `MsgEthereumTx` bills EVM gas via its ante; a
+  **derived** call bypasses that ante. If the EVM compute is NOT billed to the
+  cosmos block meter, then:
+  - a gasless `MsgExecutePayload` consumes ~0 cosmos block gas but triggers a real
+    EVM call → the block gas limit does **not** bound how many fit per block →
+    an attacker packs thousands of free EVM-triggering txs into one block → real
+    node CPU far exceeds the gas-implied budget → blocks miss their time budget →
+    **consensus can't finalize = Critical DoS/halt**, permissionless, zero cost.
+- Even without full un-metering, note `GasFeeCap/GasTipCap/GasPrice = 0` on every
+  derived message — derived EVM work is intrinsically fee-free at the EVM layer;
+  the only cost gate is whatever the *cosmos* meter charges the outer tx, which for
+  gasless msgs is not fee-backed.
+
+### The decisive experiment (the PoC the program requires)
+On a local devnet: submit N gasless `MsgExecutePayload` txs in one block, each with
+a *small declared cosmos gas* + a registered-chain CAIP2 + arbitrary owner (so each
+reaches the Step-2 factory EVM call and then rejects). Measure (a) cosmos block gas
+consumed vs (b) wall-clock block execution time / CPU. If block time scales with N
+while reported block gas stays low → un-metered amplification confirmed → Critical.
+
+## Fork surface still to mine (push-chain-evm @ 96231e7, in scope)
+`DerivedEVMCall` is custom fork code with fragile invariants flagged in the repo's
+own `DERIVED_TRANSACTIONS.md`:
+- **synthetic module-sender signer** (`isModuleSender=true`, no real key) — if a
+  user-reachable path can set `isModuleSender` or forge the synthetic signer, a
+  user could execute EVM txs *as the uexecutor module account* (which mints PRC20,
+  writes chain-meta) → theft/inflation. Verify the signer construction in the fork.
+- **`manualNonce` trusted verbatim** — nonce collision → "confusing replays"
+  (repo's own words). Check every module-sender call site for nonce-stomp.
+- **`gasless=true`** suppresses the receipt gas field (accounting blind spot).
+
 ## Honest severity read
 Real, permissionless, zero-cost, repeatable — fits the L1 DoS Critical wording.
 BUT gasless is a deliberate feature; triage may treat "gasless msgs can be
