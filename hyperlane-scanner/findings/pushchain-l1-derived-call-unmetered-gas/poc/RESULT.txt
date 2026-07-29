@@ -1,0 +1,12 @@
+=== RUN   TestKeeperTestSuite
+=== RUN   TestKeeperTestSuite/TestPoCDerivedCallCosmosGasNotMetered
+    test_gas_metering_poc.go:48: [balanceOf] EVM res.GasUsed=24302  cosmos ctx.GasMeter delta=94850
+    test_gas_metering_poc.go:67: [deploy]    EVM res.GasUsed=1883312  cosmos ctx.GasMeter delta=2246460
+    test_gas_metering_poc.go:69: >>> [SUCCESS] balanceOf: EVM/cosmos = 0.26x (cosmos charged >= EVM => metered)
+    test_gas_metering_poc.go:70: >>> [SUCCESS] deploy:    EVM/cosmos = 0.84x (cosmos charged >= EVM => metered)
+    test_gas_metering_poc.go:104: [REVERT/OOG] EVM res.GasUsed=8000000  cosmos ctx.GasMeter delta=27637
+    test_gas_metering_poc.go:105: >>> [REVERT/OOG] EVM burned 8000000 gas; cosmos meter moved only 27637 => 7972363 gas of EVM CPU went UNMETERED (free)
+--- PASS: TestKeeperTestSuite (0.32s)
+    --- PASS: TestKeeperTestSuite/TestPoCDerivedCallCosmosGasNotMetered (0.32s)
+PASS
+ok  	github.com/cosmos/evm/evmd/tests/integration	0.448s
