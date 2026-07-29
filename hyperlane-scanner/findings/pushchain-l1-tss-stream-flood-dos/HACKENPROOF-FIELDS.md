@@ -5,7 +5,7 @@
 ## TITLE
 
 ```text
-I Can Kill Your Chain: Any Anonymous Peer Can OOM-Crash Every Validator's TSS Node, For Free
+Unauthenticated Stream Flooding Lets Any Peer Kill Every Validator's TSS Node For Free
 ```
 
 ---

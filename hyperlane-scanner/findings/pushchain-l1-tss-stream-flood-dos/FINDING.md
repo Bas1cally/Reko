@@ -1,4 +1,4 @@
-# Critical — I Can Kill Your Chain: Any Anonymous Peer Can OOM-Crash Every Validator's TSS Node, For Free
+# Critical — Unauthenticated Stream Flooding Lets Any Peer Kill Every Validator's TSS Node For Free
 
 **Program:** HackenProof "Push Chain — L1" ($70k pool, up to $15k/critical).
 **In scope:** `push-chain-node` @ `0648551281dada6e300f51baca0e7464cb210eef`,
