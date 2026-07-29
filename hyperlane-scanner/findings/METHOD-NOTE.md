@@ -155,3 +155,11 @@ initial spot.
 
 Consequence: treat "I found something by reading" as a hypothesis, not a finding. The bar for
 "submit" should be "I ran something that proves it," not "I can explain why it should be true."
+
+A second duplicate seen after the first (same bug, independent write-up) was sharper than ours in
+one specific way worth copying regardless of duplicate status: it quantified attacker cost vs.
+victim cost as a table (7x / 19x / 37x amplification at three portfolio sizes, extrapolated to
+~31,000x at the spec's target scale) instead of just asserting the asymmetry. Reachability proof
+answers "can this happen"; a cost-amplification number answers "why does anyone care," and it's
+the second question a judge actually weighs severity on. Add it whenever the finding is a
+griefing/DoS-by-cost-asymmetry shape, not just a reachability one.
