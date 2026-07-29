@@ -98,10 +98,10 @@ return res, nil
 
 ## Notes / honesty
 - The PoC proves the **core accounting flaw** directly at the fork level (8M→27k). The
-  end-to-end `MsgExecutePayload` chain is argued from the in-scope handler code above; a
-  full-node e2e PoC additionally needs `dkls23-rs` (not reachable in this env) to build
-  `pchaind`. The accounting bug + the gasless/permissionless reachability are each shown
-  from code + a passing test.
+  end-to-end `MsgExecutePayload` chain is argued from the in-scope handler code above.
+  The accounting bug + the gasless/permissionless reachability are each shown from code
+  plus a passing test. (`pchaind` also builds here without `dkls23-rs` — see the Update
+  section — so a full-node e2e is feasible if required for triage.)
 - Distinct from the disclosed derived-call findings F-2026-17738 (bloom-on-revert) and
   F-2026-17736 (failed-execution-commit); this is the **gas-metering** gap on the same
   failure branch, not covered by those regression tests.
