@@ -105,3 +105,12 @@ return res, nil
 - Distinct from the disclosed derived-call findings F-2026-17738 (bloom-on-revert) and
   F-2026-17736 (failed-execution-commit); this is the **gas-metering** gap on the same
   failure branch, not covered by those regression tests.
+
+## Update — full-node e2e is feasible in this env
+`pchaind` builds **without** `dkls23-rs` (that private repo backs only the off-chain
+`puniversald`/Universal Client TSS; `go list -deps ./cmd/pchaind` shows no `go-wrapper`
+import). A 207 MB `pchaind` was built and runs here. A full-protocol e2e (register a
+chain in `uregistry`, deploy the UEA factory, deploy an attacker UEA, submit a gasless
+`MsgExecutePayload` whose signed payload burns gas then reverts, and observe block gas
+vs execution) is therefore possible; it just requires replicating the UEA genesis setup.
+The core accounting flaw is already proven directly by the passing fork test above.
