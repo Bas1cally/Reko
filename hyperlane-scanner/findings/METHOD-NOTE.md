@@ -206,3 +206,24 @@ victim cost as a table (7x / 19x / 37x amplification at three portfolio sizes, e
 answers "can this happen"; a cost-amplification number answers "why does anyone care," and it's
 the second question a judge actually weighs severity on. Add it whenever the finding is a
 griefing/DoS-by-cost-asymmetry shape, not just a reachability one.
+
+**The cluster, counted.** Pulled the full 1,200-issue Tare judging list and counted: 46 of 1,200
+submissions (~3.8%) are the exact same bug shape as ours (NFT transfer bumps `ownershipNonce` →
+`updateNav` restart never converges → deposits/redemptions frozen), not just the 147 that merely
+mention "NFT" for unrelated reasons (theft, lock-griefing, marketplace bugs). 46 independent
+researchers — reading the same two functions — converged on the identical root cause and mostly
+the identical wording ("any loan-NFT holder will [freeze/block/stall] deposits and redemptions").
+That is the quantified version of "reading alone produces the median finding, not a differentiated
+one": a bug this reachable by static reading gets found by ~4% of an entire contest's researcher
+pool independently, every time, regardless of tooling.
+
+**Fazit:** the two Push Chain Criticals never had this problem, and now there's a number to explain
+why. Neither survived on "I read the code and it looks wrong" — one lived because its first
+hypothesis was wrong and got killed by a measurement before the real bug turned up on the failure
+path; the other lived because "the heap grew" was rejected as insufficient and pushed all the way
+to a kernel OOM-kill with a PID in a dmesg log. Tare's finding was real, reachable, and *still*
+landed in a 46-wide duplicate cluster because reachability-by-reading was the entire method. The
+takeaway isn't "read more carefully" — 46 other people did that too. It's: once a bug is provable
+by reading two functions, assume it is not differentiated, and the only way to find out is to try
+to break it (build a harness, disprove your own first hypothesis, escalate the proof past
+"plausible" to "undeniable") before deciding it's worth the write-up time.
