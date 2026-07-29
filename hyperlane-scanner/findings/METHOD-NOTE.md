@@ -142,6 +142,39 @@ Consequence for target selection: when offered a choice between a running contes
 prefer the contest — not because the bug density is different, but because the contest supplies
 the discipline an open bounty leaves entirely to us.
 
+## A rejected Tare finding, and why — two independent kill shots
+
+Seen after judging: a Servicer `createLedgerEntries` NAV-inflation finding, well-quantified
+(146k-gas PoC, exact NAV-doubling numbers), ruled **Invalid** by the lead judge on two separate
+grounds. Both are checks our own rule #1 already asks, sharpened by seeing them fail in practice:
+
+1. **The "attacker" was the role the docs name as trusted for that exact function.**
+   `SECURITY.md` (T-4) states the Servicer is trusted "to use `createLedgerEntries` only for
+   legitimate accounting." The submission's entire attack *is* that trust assumption being
+   violated. No PoC rigor rescues a finding whose premise is "the explicitly-trusted role
+   stops being honest" — that is a rogue-privileged-user scenario, out of scope everywhere we've
+   seen this rule stated. Check every function you plan to abuse against the project's own named
+   trust list before investing in the PoC, not after.
+
+2. **The cross-user-harm escalation was pre-empted by a *different* doc.** The submission tried
+   the same carve-out that saved our own finding ("if they can hurt other loans/users, valid
+   issue") — reasonable in principle, since it's literally the scope's own words. It still failed,
+   because `specs/vault.md`'s "Single Entity Assumption" defines all vault shareholders as the
+   same entity and explicitly excludes adversarial shareholder-vs-shareholder scenarios from the
+   threat model. "Attacker redeems at an inflated price, diluting other shareholders" is a
+   **wealth transfer between members of a group the spec already assumes is non-adversarial** —
+   not cross-user harm in the sense the carve-out means.
+
+   Contrast with why ours held: our finding froze deposits/redemptions/guardian-repair for
+   *everyone*, with no winner — a systemic DoS, not a redistribution between shareholders. The
+   carve-out survives when the harm is outside the assumed-single-entity group, or benefits no
+   one (DoS); it dies when the harm is "one shareholder gains what another loses," because the
+   spec has already defined that pair as non-adversarial by assumption.
+
+   Before relying on a scope carve-out to escalate severity: search *every* spec/threat-model doc
+   in the repo (not just the one governing the contract you're attacking) for a clause that
+   quietly assumes away the exact victims your escalation depends on.
+
 ## Reading is not enough — the Tare NFT-nonce lesson
 
 Checked the public Sherlock findings after the Tare contest opened up: many other reports
