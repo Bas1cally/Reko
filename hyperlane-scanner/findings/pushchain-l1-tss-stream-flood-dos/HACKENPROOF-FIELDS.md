@@ -5,7 +5,7 @@
 ## TITLE
 
 ```text
-Unauthenticated, unbounded libp2p stream flooding lets any internet peer crash every validator's TSS node with zero funding and no privileged role
+I Can Kill Your Chain: Any Anonymous Peer Can OOM-Crash Every Validator's TSS Node, For Free
 ```
 
 ---
