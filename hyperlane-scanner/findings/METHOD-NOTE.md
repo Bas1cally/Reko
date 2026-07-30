@@ -82,6 +82,12 @@ For Tare that dimension was concrete: `SECURITY.md` discusses NAV *correctness* 
 #9, #16, #28, D-9, T-3) and NAV *liveness* almost not at all. The finding lives exactly there —
 `navStart` is a one-way flag that gates every privileged function and has no reset.
 
+> **[CORRECTED 30 Jul 2026 — see "The Tare NFT issue was ruled Invalid" at the bottom.]** This claim
+> is wrong on two counts the judge later exposed: (a) the liveness/griefing behavior *is* documented
+> — in `specs/vault.md`, not `SECURITY.md` — so I looked at one threat-model doc and missed another;
+> (b) `navStart` is **not** no-reset: `updateNav()` completing clears it, so it is a *re-triggerable
+> restart*, not a permanent one-way lock. Both errors are exactly what sank the submission.
+
 ## The reusable bug shape
 
 The same shape found the Tare finding and the Vesu lead, in two different languages:
@@ -91,6 +97,10 @@ The same shape found the Tare finding and the Vesu lead, in two different langua
 
 - Tare: `navStart` set by `updateNav`, cleared only on finalisation, restart forced by
   `ownershipNonce` which any NFT holder can bump.
+  **[CORRECTED — this is the mis-application. "cleared only on finalisation" means it CLEARS: the
+  manager completes `updateNav()` between transfers, so there IS a reset. It is re-triggerable
+  griefing, not a no-reset lock. The shape was matched on a criterion the target didn't actually
+  satisfy. See bottom.]**
 - Vesu: `last_rate_accumulator`, monotonic, hard ceiling at `18 × SCALE` in
   `assert_security_invariants`, no setter anywhere.
 
@@ -264,3 +274,50 @@ absolute. The two are compatible: go all the way in *and* report the honest resu
 mode being corrected is stopping *before* the work, not stopping *after* it with an honest negative.
 The tell to catch in myself: if I'm recommending "bank / hold pulver dry" and I have **not** yet
 built the harness and tested a hypothesis, I'm turning away early — push in instead.
+
+## The Tare NFT issue was ruled Invalid — the judge's exact grounds
+
+Recorded 30 Jul 2026. The lead judge ruled our `ownershipNonce`/NAV-restart finding **Invalid**
+(not merely duplicate — *invalid*). The full reasoning, because every sentence is a reusable lesson:
+
+> "Explicitly documented in `specs/vault.md`. Unsolicited loanNFT transfers are expected to increment
+> the vault's ownership nonce and restart an active NAV computation. The spec describes this as
+> intentional and acknowledges that a griefer may trigger repeated restarts. **Each transfer causes
+> only one restart.** The manager can call `updateNav()` again and complete the computation unless
+> the attacker keeps sending a new NFT before every batch. For a DoS to qualify as Medium, a single
+> occurrence should generally lock funds for **more than a week** or affect a **time-sensitive
+> function**. Neither is demonstrated. NAV-dependent approvals are **discretionary** operations
+> performed by the Investor Manager…"
+
+Three distinct, reusable kill-criteria, each of which alone was fatal:
+
+1. **It was documented — in a doc I didn't fully read.** The behavior is in `specs/vault.md`,
+   explicitly called intentional, *with the griefer scenario acknowledged*. My METHOD-NOTE claimed
+   this finding lived in an "undocumented dimension." It didn't. Lesson, sharpened: "read the
+   project's own docs" means **every** threat-model/spec doc in the repo, and grep them for the
+   exact mechanism (here: "ownership nonce", "restart", "NAV") *before* writing up — a hit in any one
+   of them is an instant kill. I checked `SECURITY.md` and stopped; `specs/vault.md` had it.
+
+2. **Re-triggerable restart ≠ permanent freeze — and I claimed permanent.** The whole finding rested
+   on "the restart branch never converges." The judge's one-line demolition: *each transfer causes
+   only one restart; the manager completes `updateNav()` in between.* There is a reset (completing
+   the cycle); the attacker must pay a fresh NFT transfer before **every** batch to sustain it. That
+   is sustained griefing, not a one-way lock. **The reusable bug shape's "no reset path" clause must
+   be tested literally: is the lock permanent from a single action, or does a normal operation clear
+   it such that the attacker must re-pay each round?** If the latter, it is not a freeze — it is a
+   cost-asymmetry griefing claim, and lives or dies on the amplification math, not on "it's stuck."
+
+3. **The severity bar for DoS, stated by a judge in numbers.** "A single occurrence should generally
+   lock funds for **more than a week**, or affect a **time-sensitive function**." And: blocking
+   **discretionary** operator operations (here NAV-dependent approvals by the Investor Manager) does
+   **not** count — no deadline, no forced loss. Bank this as the concrete DoS-severity test to apply
+   *before* writing any DoS finding: (a) does one action lock for >1 week, OR (b) does it break a
+   function with a hard deadline / that an unprivileged victim needs on demand? If neither, it is
+   below Medium regardless of how clean the PoC is.
+
+**How this reconciles with "don't turn away":** these are not reasons to skip the work — they are the
+checks to run *as part of* the work, on the far side of the reachability walk, so the write-up either
+clears them or isn't sent. Going all the way in includes grepping every spec doc for the mechanism,
+proving the lock survives the victim's own recovery action (not just the first trigger), and matching
+the impact against the numeric severity bar. Do all three, then submit or drop — but never skip the
+hunt to avoid finding out.
