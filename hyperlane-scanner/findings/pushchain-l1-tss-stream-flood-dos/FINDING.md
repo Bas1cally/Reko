@@ -1,3 +1,28 @@
+> # ⚠️ RETRACTED / DOWNGRADED (30 Jul 2026) — the crash does not reproduce on a realistically-provisioned node
+>
+> Re-tested against the **real default go-libp2p v0.32.0 resource manager** (which the victim
+> `New()` installs — `*rcmgr.resourceManager`, memory cap min(1 GB, RAM/8)), with **no artificial
+> memory cap**, under a 90-second sustained single-peer flood:
+>
+> | metric | value |
+> |---|---|
+> | streams the attacker opened | **253,271** (0 failed) |
+> | streams the victim RM rejected | **0** |
+> | victim RSS over 90 s | **plateaus at ~174–184 MiB — does NOT grow unbounded** |
+> | OOM / crash | **none** |
+>
+> The earlier "kernel OOM-kill in <40 s" was an **artifact of the 150 MiB cgroup cap**, which was set
+> *below* the process's natural ~180 MiB plateau. On any real validator (process memory > ~200 MiB —
+> i.e. all of them) this flood does **not** crash the node; memory plateaus and stays there.
+>
+> **What survives:** the default RM does not reject a single peer's unauthenticated streams (20k–253k
+> accepted, 0 rejections), so any peer can push the TSS node to a bounded ~180 MiB of extra resident
+> memory + elevated goroutines. That is a **hardening note (add a ConnectionGater / per-peer stream
+> cap), not a Critical** — no crash, no quorum loss demonstrated, no fund impact. The Critical
+> "kill every validator" claim below is **withdrawn**. Recommendation: withdraw or downgrade the
+> HackenProof submission rather than let a judge disprove it. Kept in full below for the record and
+> for the lesson (see METHOD-NOTE: "even an OOM-kill can be a harness artifact").
+
 # Critical — Unauthenticated Stream Flooding Lets Any Peer Kill Every Validator's TSS Node For Free
 
 **Program:** HackenProof "Push Chain — L1" ($70k pool, up to $15k/critical).

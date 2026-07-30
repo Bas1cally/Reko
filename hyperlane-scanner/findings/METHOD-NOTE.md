@@ -321,3 +321,42 @@ clears them or isn't sent. Going all the way in includes grepping every spec doc
 proving the lock survives the victim's own recovery action (not just the first trigger), and matching
 the impact against the numeric severity bar. Do all three, then submit or drop — but never skip the
 hunt to avoid finding out.
+
+## Even an OS-level kill can be a harness artifact — the Push Chain #2 retraction
+
+Recorded 30 Jul 2026. This one stings, because the whole "aim for the kill" ethos held up the TSS
+stream-flood finding as the *model* — "the other lived because it produced an actual kernel OOM-kill,
+not just heap growth." On re-examination that OOM-kill was **not real** in the way that mattered.
+
+What happened: the finding claimed any peer can OOM-kill a validator's TSS node. The "proof" was a
+genuine `dmesg` kernel OOM-kill of the victim process. But the victim was running under a **150 MiB
+cgroup cap**, and the process's *natural* memory plateau under the flood is ~180 MiB. So the cap was
+set **below** normal operating memory — the harness manufactured the crash. Re-tested with the real
+default resource manager and no artificial cap, 253,271 streams from one peer over 90 s produced
+**zero rejections but a flat ~180 MiB plateau — no crash.** On any real node the attack is a bounded
+resource bump, not a kill. Downgraded from Critical to a hardening note.
+
+The trap, precisely: I treated "a real process got OOM-killed, here's the kernel log" as the
+undeniable endpoint. It *looked* like the gold standard the note preaches. But a crash is only
+meaningful **at production-realistic resource limits**. A memory cap chosen to make the PoC crash is
+not evidence of anything except the cap. The "undeniable proof" was undeniable about the wrong thing.
+
+Rules added, sharp:
+
+1. **A resource-exhaustion crash must reproduce at production-realistic limits, or it isn't a crash.**
+   Before claiming OOM/kill: what bounds the resource on a real node (here: go-libp2p's default RM,
+   min(1 GB, RAM/8), which the code *does* install), and does the attack still cross it? Measure the
+   **natural plateau with no artificial cap first**; only then decide whether any realistic cap sits
+   below it.
+2. **Know the library's defaults before claiming "no limits."** The finding said "no resource limits
+   configured." False: `libp2p.New()` in v0.32 installs an autoscaled RM by default. "Relies on
+   defaults" ≠ "has no limits." Read the dependency's default, don't assume the absence of an
+   explicit option means the absence of protection.
+3. **Try hardest to break the finding you're *most* proud of.** The flood finding felt like the
+   strongest of the engagement, so it got the least adversarial re-test until forced. Invert that:
+   the finding you'd stake your credibility on is the one to attack first, because it's the one whose
+   failure costs the most — and here it would have taken down finding #1's credibility with it.
+
+The good news is the same as the lesson: this was caught by *us*, by re-running at realistic
+parameters, before a judge caught it. That is the disproof step working as intended — just one
+iteration later than it should have.
