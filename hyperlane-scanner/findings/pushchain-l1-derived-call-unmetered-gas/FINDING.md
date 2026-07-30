@@ -82,6 +82,27 @@ Permissionless, zero-cost, repeatable amplification of validator CPU that is inv
 block gas accounting → consensus-level DoS (nodes overloaded, blocks miss their time
 budget). Matches the program's Critical DoS wording directly.
 
+### Anticipated objection: "this is sustained griefing, not a single permanent halt"
+
+Correct that it is sustained — and pre-empted on the three grounds a DoS is normally
+rejected on:
+
+1. **No honest operation clears it while the attack runs.** This is not a
+   restart-that-a-manager-can-complete-in-between shape. The system's *own* bounding
+   mechanism — the block gas meter — is precisely what fails: it charges ~27k for ~8M of
+   real EVM CPU, so it does not bound the attacker at all. There is no in-between window an
+   operator can use to "finish the computation"; every block stays saturated for as long as
+   the attacker submits.
+2. **Sustaining costs the attacker zero.** Gasless message + full cosmos-tx rollback on the
+   revert ⇒ each trigger is free and infinitely repeatable. The cost asymmetry is the whole
+   finding: ~8M EVM-gas of validator CPU per tx for 0 attacker fee, quantified by the passing
+   PoC (8,000,000 → 27,637).
+3. **It hits a non-discretionary, time-sensitive function.** The victim is block
+   finalization / consensus liveness — not a discretionary operator action with no deadline.
+   "Inability to process and finalize new transactions" is the program's explicit Critical
+   criterion. The severity does not rest on any single tx locking funds for a week; it rests
+   on the network being unable to finalize for the duration of a zero-cost, unbounded attack.
+
 ## Suggested fix
 
 Charge the EVM gas to the cosmos meter regardless of execution result — move the

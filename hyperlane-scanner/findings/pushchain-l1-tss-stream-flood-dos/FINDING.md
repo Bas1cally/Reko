@@ -127,6 +127,38 @@ victim never once rejected a stream in either run.
   stall network-wide. This is the concrete path from "a Go networking bug" to
   "loss of chain liveness / stuck funds" the program's impact wording targets.
 
+## Anticipated objection: "the operator just restarts the crashed node"
+
+Correct that a killed process can be restarted — and pre-empted, because restart is
+not recovery here:
+
+1. **A restarted node is re-killed in under 40 seconds.** The crash-proof timeline
+   (66 → 110 → 139 MiB → OOM-kill at ~t+39s) is under *continuous* flood; a node that
+   comes back up while the attacker is still flooding is driven straight back to OOM.
+   Recovery requires the **attack to stop**, and nothing in Push Chain's code makes it
+   stop — there is no honest operation that clears it (contrast a griefing-restart a
+   manager can complete between triggers).
+2. **Sustaining costs the attacker ~zero, against every validator at once.** A handful
+   of connections + 4 bytes/stream, and validator P2P addresses are on-chain public
+   data, so one script holds the entire registered validator set down in parallel
+   indefinitely. The asymmetry (attacker: negligible bandwidth, zero funding; victims:
+   all dead) is the finding.
+3. **It hits a non-discretionary function with a hard consequence.** While the flood
+   runs, the TSS quorum cannot form, so bridge fund releases/migrations stall
+   network-wide — not a discretionary operator convenience. "Widespread node crashes"
+   and "DoS attacks that overload nodes to the point where they cannot participate" are
+   the program's own explicit Critical criteria; the severity does not rest on a single
+   packet causing a week-long lock, but on all validators being held down for the
+   duration of a zero-cost, unstoppable-by-honest-action attack.
+
+## Cross-check: not a documented/known behavior
+
+The missing connection gating / resource limits on the TSS libp2p host is not
+described as intentional anywhere in the in-scope `universalClient` code or its
+comments — unlike a spec-acknowledged tradeoff, this is an unguarded transport
+surface. (The message-layer auth that *is* present sits downstream of the crash and
+never runs; see the crash-proof section.)
+
 ## Suggested fix
 
 Defense-in-depth, cheapest-first:
