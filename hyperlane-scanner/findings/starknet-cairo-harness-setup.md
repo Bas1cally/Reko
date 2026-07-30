@@ -273,3 +273,42 @@ instantly PoC-able. Recommendation: bank, and redeploy hunting effort to a
 contest that fits the checklist (holdable nSLOC, published threat model,
 reachable Critical surface) where the edge and PoC-ability align without a
 formally-verified wall.
+
+---
+
+## Ambition pass — the last fresh surfaces (36 contestants submitted)
+
+Pushed past the bank point to read the remaining fresh + unread Critical-tier
+code. All sound:
+
+- **Deprecated (Cairo0) syscall path** (`deprecated_execute_syscalls.cairo`, 717
+  L): mirrors the new path exactly — storage/replace_class via the same
+  `dict_update` binding, and deprecated deploy calls the **same shared
+  `deploy_contract`** with its `UNINITIALIZED_CLASS_HASH` check. No old-path
+  asymmetry.
+- **Blake class hash** (`blake_compiled_class_hash.cairo`, new): leaf/internal
+  domain separation (`+1`), nested per-list hashing, fixed 5-item outer, and
+  blake2s inherently commits message length ⇒ no length-ambiguity collision. The
+  bytecode segment-tree "skip" path forces a skipped segment's first felt to `-1`
+  (invalid opcode) so execution can't enter it — the documented soundness
+  argument holds.
+- **Deprecated (Pedersen) class hash** (`deprecated_compiled_class.cairo`):
+  standard length-committing `hash_update_with_hashchain` per field, fixed outer
+  structure, selectors strictly sorted (`assert_lt_felt`); `hinted_class_hash` is
+  part of the committed hash so it can't induce a collision. Collision needs a
+  Pedersen break.
+
+**On "36 contestants submitted":** submission count is not valid-Critical count.
+Directly measured on Tare (same platform family): ~1,200 submissions, the
+overwhelming majority ruled Invalid, and the one reachable-by-reading bug landed
+in a 46-wide duplicate cluster. 36 submissions here is 36 attempts — dominated,
+by base rate, by DA/High-tier, duplicates, and invalids.
+
+**Definitive verdict:** hunted the entire reachable (non-privileged) ∩
+Critical-tier ∩ PoC-able surface — both syscall paths, both class-hash
+implementations, deploy, storage, state commitment, the DA compression/alias
+code, and the arithmetic/dict primitives — with a specific hypothesis per path
+and the OS harness live to test any of them. Every hypothesis died, most for one
+structural reason (bind-via-dict + squash, proven sound). No fabricated finding —
+the note forbids it. This is maximum ambition met with an honest negative; the
+harness stands as the reusable weapon if a concrete hypothesis surfaces later.
