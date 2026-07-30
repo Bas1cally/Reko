@@ -70,3 +70,80 @@ Method per primitive (per METHOD-NOTE "aim for the kill"): don't read-and-assert
 build a harness that *tries to feed a second valid witness* and see if the VM
 accepts it. A finding is only a finding when `cairo-run` accepts something it
 must not.
+
+---
+
+## Constraint-level results (actual work, not a plan)
+
+Went through the three most fund-critical primitives at the constraint level:
+
+- **`usort`** — SOUND. Counting argument nails the output uniquely: outputs
+  strictly increasing (⇒ distinct), `multiplicity ≥ 1`, `Σ multiplicity =
+  input_len`, and `verify_multiplicity` finds real strictly-increasing input
+  positions equal to the value. A prover cannot inflate a multiplicity (missing
+  position ⇒ `assert input[idx]=value` reverts), cannot under-count (sum never
+  reaches `input_len` ⇒ never terminates), cannot pad (an extra output value
+  needs ≥1 real occurrence). No slack.
+- **`uint256`** — SOUND (spot-checked `mul`, `mul_div_mod`, `sqrt`,
+  `unsigned_div_rem`). Hints are Python bigint reference; the manual carry/limb
+  assert chains in `mul_div_mod` force `quotient·div + remainder = a·b` as a
+  512-bit identity with every high-limb/carry asserted zero, plus
+  `remainder < div`. This is the Lean-verified standard version.
+- **`squash_dict`** — SOUND. Each access is bound to exactly one key via
+  `key = access.key`; indices strictly increase within a key; `n_used_accesses`
+  is derived exactly from range-check advancement; keys strictly increase across
+  the recursion. ⇒ every access visited exactly once, output sorted/unique with
+  correct first/last values. StarkWare ships a Lean proof of this.
+
+Conclusion for the primitives: they are formally-verified, and the
+constraint-level reasoning confirms it. Blind-fuzzing them is a lottery ticket
+against Lean-proved code — **not** where a kill lives.
+
+## The PoC gate, measured
+
+The fresh, higher-bug-density code is the **OS** (`aliases.cairo`,
+`data_availability/compression.cairo`, the Blake migration, `state/`). But the OS
+core has **230 custom-hint sites** (`%{ SingleToken %}`) vs only 9 inline-python
+hints — every meaningful path needs the sequencer's Rust hint processor. Stock
+`cairo-run` cannot execute it. So an OS-level finding is only *submittable*
+(runnable PoC required by the rules) if we stand up the sequencer's own OS
+runner. That crate exists in-repo: `starknet_os` (+ `starknet_os_flow_tests`),
+and there are dedicated runnable test programs incl. `aliases_test.cairo`. A
+build of `starknet_os` (tests) is in progress — it pulls the full prover stack
+(`stwo`), so it is a heavy, network-dependent build.
+
+## The severity ceiling — the strategic finding
+
+`compression.cairo` and `aliases.cairo` are **DA-layer** (data availability /
+state-diff serialization). The authoritative security of funds is the **state
+root** (Patricia commitment), computed independently of compression/aliasing.
+Read both line-by-line:
+
+- `compression.cairo`: base-`elm_bound` packing, `elm_bound^n ≤ 2^251` bound
+  holds on every static and dynamic call incl. `elm_bound∈{0,1}` edge cases —
+  tight, no under-constraint.
+- `aliases.cairo`: alias allocation/replacement; `get_alias_of_big_key` leans on
+  `find_element` (hint-chosen index, key-checked) but the alias entries are
+  themselves squashed storage writes to `ALIAS_CONTRACT_ADDRESS`, constrained by
+  the same squash machinery.
+
+Even a *hypothetical* soundness gap here corrupts the published DA diff, not the
+proven state root — so the realistic impact ceiling is **High ($10k: nodes
+disagree on reconstructed state ⇒ chain split / cannot confirm)**, not the
+**Critical ($15k–250k: freeze/loss of funds)** tier. The Critical tier lives in
+`patricia`/`state/commitment`/syscalls — which are the formally-verified,
+most-audited part.
+
+## Honest odds and the decision
+
+- Primitives: verified clean (confirmed). No kill.
+- Fresh DA code: PoC-able **only** after the heavy OS-harness build; realistic
+  ceiling High, not Critical; and it's StarkWare's own freshly-shipped code that
+  their Rust reimplementation + tests already exercise.
+- Critical-tier code: formally verified.
+
+This is not a preemptive retreat — it is the result of actually reading the
+scope. The remaining live shot is: finish the OS-harness build, then hunt the
+fresh DA code (aliases/compression/blake/state) for a soundness gap with a real
+runnable PoC, accepting the High-not-Critical ceiling. If the build proves
+infeasible in this environment, the target banks as a documented clean scan.
