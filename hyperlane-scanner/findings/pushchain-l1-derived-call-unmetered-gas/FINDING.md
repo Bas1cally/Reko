@@ -103,6 +103,46 @@ rejected on:
    criterion. The severity does not rest on any single tx locking funds for a week; it rests
    on the network being unable to finalize for the duration of a zero-cost, unbounded attack.
 
+## Hardening — full reachability chain verified from source (30 Jul 2026)
+
+Applied the same adversarial re-verification that reshaped finding #2, this time
+link-by-link against the actual `push-chain-node` + `push-chain-evm` source. Every
+link holds; unlike #2 there is **no weak link**:
+
+1. **Gasless** — `app/txpolicy/gasless.go` lists `MsgExecutePayload` (and
+   `MsgMigrateUEA`); `app/ante/fee.go:63` returns `next(ctx, tx, simulate)` for a
+   gasless tx, skipping fee deduction entirely. (It still requires `GetGas() > 0`,
+   so the attacker declares a low `GasWanted` ≈ the ~27k actually metered.)
+2. **Permissionless** — `x/uexecutor/types/msg_execute_payload.go:49` `ValidateBasic`
+   only checks the signer is a valid bech32 address; any account can sign. (One-time
+   setup: deploy an attacker-owned UEA; every attack tx afterward is free.)
+3. **Attacker controls the gas limit** — `x/uexecutor/keeper/evm.go:173`
+   `gasLimit.SetString(universal_payload.GasLimit, 10)` takes the limit from the
+   attacker-supplied payload, then passes it to `DerivedEVMCall`.
+4. **The reachable call IS the buggy one** — `call_evm.go:108` `DerivedEVMCall` is a
+   thin wrapper that calls `DerivedEVMCallWithData` at `call_evm.go:126` — the exact
+   function the PoC tests. Its failure path (`call_evm.go:325`) returns before
+   `ctx.GasMeter().ConsumeGas(...)` at line 329.
+5. **Unmetered on failure** — proven by the passing test (8,000,000 → 27,637).
+6. **Net-zero cost on revert** — `x/uexecutor/keeper/msg_execute_payload.go:87-97`:
+   the handler runs `CallUEAExecutePayload`, then `DeductGasFeesFromReceipt`, then
+   `if execErr != nil { return execErr }`. Returning the error rolls back the whole
+   Cosmos tx (cached store discarded), which **undoes the UEA gas deduction too** —
+   so the reverting attacker pays nothing, while every validator executed the ~8M
+   EVM CPU.
+
+**The load-bearing number is measured, not argued:** amplification =
+8,000,000 / 27,637 = **~289×**. Each unit of block-gas budget buys the attacker ~289
+units of real EVM CPU. A block packed with these txs therefore takes ~289× its
+gas-budgeted execution time, so validators cannot execute/finalize it within the
+block interval → consensus stalls. This holds for any `MaxGas` value.
+
+**Honest residual:** the accounting bug + every reachability link are confirmed from
+code and a passing test; a full live e2e (pack a real block on `pchaind`, measure
+wall-clock execution vs block time) would be *confirmatory*, not exploratory, and is
+the one step not yet run (it needs the UEA genesis setup). This is the finding's
+stated weakest point — stated, not hidden.
+
 ## Suggested fix
 
 Charge the EVM gas to the cosmos meter regardless of execution result — move the
