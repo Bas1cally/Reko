@@ -204,3 +204,72 @@ is a focused read of `syscall_impls.cairo` for a specific storage-write/call
 soundness gap — worthwhile *only because* the harness can now test it instantly.
 Absent a specific hypothesis surfacing there, the disciplined call is to bank
 this target (evidence-complete, harness preserved) rather than grind.
+
+---
+
+## The syscall hunt — done, hypothesis-driven, every hypothesis died
+
+Read the full user-reachable syscall surface (`syscall_impls.cairo`,
+`deploy_contract.cairo`, `execute_syscalls.cairo` dispatch) and formed a specific
+Critical hypothesis for each state-affecting path. All died — and all for the
+**same structural reason**, which is the real finding here:
+
+> The OS binds *every* hint-guessed state value through `dict_update`/`dict_read`
+> on `contract_state_changes` (the hint's guessed `state_entry`/`prev_value` must
+> equal the dict's actual current value or the update reverts), and every storage
+> value is further chained by the later `squash_dict` (each access's `prev` must
+> equal the previous access's `new`). Since `squash_dict` is sound (proven above),
+> no hint can inject a value the state didn't actually hold.
+
+Hypotheses tested and killed:
+
+- **deploy-hijack** (redeploy over a live contract): dead. `deploy_contract`
+  asserts `state_entry.class_hash = UNINITIALIZED_CLASS_HASH` and `nonce = 0`,
+  with `state_entry` bound by `dict_update`; reserved addresses excluded; the
+  deploy address is a deterministic hash of (salt, class_hash, calldata,
+  deployer), not hint-chosen.
+- **caller-spoof** (`call_contract` forging `caller_address`): dead. Caller is
+  inherited from the parent `ExecutionContext`, not guessed; callee `class_hash`
+  comes from a bound `dict_read`.
+- **storage-value-forge** (read/write a value the slot never held): dead. Chained
+  by squash; read entries are `prev==new` and must chain to the prior write.
+- **block-hash / get_class_hash_at forge**: dead. Both go through bound
+  `dict_read`/`dict_update` + squash chaining.
+- **alias `find_element` duplicate-key**: dead by reading (squashed ⇒ unique).
+
+The one genuine missing check found: `execute_replace_class` has a StarkWare
+`TODO(line 902): Check that there is a declared contract class with the given
+hash.` — it does **not** verify `request.class_hash` is declared. Analyzed to a
+non-finding: the syscall is **self-scoped**
+(`contract_address = execution_info.contract_address` — a contract can only
+replace its *own* class), so the worst case is a contract setting its own class
+to an undeclared hash and thereby **self-bricking** (future calls can't load the
+class). No victim (out of scope as self-harm), no soundness break (the state root
+honestly reflects the garbage class_hash), and it is covered upstream by the
+blockifier's execution-time class-declaration check before the OS ever runs.
+Documented per the note's honest-invalidation discipline.
+
+## Final verdict — evidence-complete clean, harness banked
+
+StarkNet is now hunted at the only intersection that pays for us — reachable
+(no operator/governance privilege) AND Critical-tier (fund freeze/loss) AND
+PoC-able — and it is clean:
+
+- Primitives (`usort`/`uint256`/`squash_dict`): formally-verified sound
+  (constraint-level confirmed).
+- State commitment: funnels entirely into formally-verified `patricia`.
+- Syscall layer: sound via the pervasive bind-via-dict + squash pattern; every
+  specific hypothesis died.
+- Fresh DA code (`compression`/`aliases`): tight, and caps at High anyway.
+
+This is the *opposite* of the earlier premature turn-away: it is the result of
+building + proving the full OS execution harness and reading the Critical-tier
+source with specific, tested hypotheses. Per METHOD-NOTE, a thorough negative is
+the product, not overhead — and fabricating a finding to satisfy "kill" is
+exactly what the note forbids. The harness is preserved as a proven, reusable
+weapon: if a specific hypothesis surfaces in the contest's remaining window (or
+from the deprecated-syscall path / blake migration, not yet read), it is
+instantly PoC-able. Recommendation: bank, and redeploy hunting effort to a
+contest that fits the checklist (holdable nSLOC, published threat model,
+reachable Critical surface) where the edge and PoC-ability align without a
+formally-verified wall.
