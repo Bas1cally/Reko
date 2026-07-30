@@ -27,3 +27,24 @@ CONCLUSION (honest):
 - "Kill every validator's TSS node for free" (single peer) is NOT supported.
   The defensible claim is a conditional resource-exhaustion OOM of
   memory-capped deployments — Medium/High at most, not a clean Critical.
+
+4) THE DECISIVE NUMBER — victim's default RM system-wide admission caps (read
+   directly from rcmgr.DefaultLimits.AutoScale() on the 16 GiB box):
+     SYSTEM StreamsInbound = 3033   (total concurrent inbound streams, ALL peers)
+     SYSTEM ConnsInbound   = 189    (total concurrent inbound connections)
+     SYSTEM Memory         = 2.09 GB (RM-counted)
+     PER-PEER StreamsInbound = 507
+   => No attacker "army" can exceed 3033 concurrent inbound streams; beyond that
+      the RM rejects ("cannot reserve inbound stream"). Max uncounted memory from
+      the make([]byte,1MiB) buffers is therefore ~3033 x 1 MiB ~= 3 GiB,
+      REGARDLESS of how many attacker peers/processes/machines are used. This is
+      why the earlier same-box multi-attacker plateau (~2 GiB) was NOT purely a
+      test artifact — there is a real system-wide stream ceiling just above it.
+   => The ceiling autoscales with host RAM (16->~3 GiB, 32->~6, 64->~12), staying
+      ~1/5 of RAM, i.e. always below total host RAM. A node whose universalClient
+      process may use its host-RAM-proportional share SURVIVES any army (plateaus,
+      degraded). OOM occurs ONLY when the process/container memory limit is set
+      BELOW the host-RAM-derived ceiling (go-libp2p autoscales from HOST RAM, not
+      the cgroup) — e.g. a 2 GiB container on a 16 GiB host. Proven at 2 GiB.
+   CONFIRMS round-5 conclusion with a hard mechanism: conditional OOM of
+   memory-capped deployments, not an unconditional "kill any validator."
