@@ -1,0 +1,16 @@
+[  374.796226] oom-kill:constraint=CONSTRAINT_MEMCG,nodemask=(null),cpuset=/,mems_allowed=0,oom_memcg=/tssflood2g,task_memcg=/tssflood2g,task=tssvictim,pid=3663,uid=0
+[  374.801132] Memory cgroup out of memory: Killed process 3663 (tssvictim) total-vm:4262192kB, anon-rss:2092264kB, file-rss:22344kB, shmem-rss:0kB, UID:0 pgtables:4344kB oom_score_adj:0
+
+--- Test parameters (artifact-free) ---
+Victim: real universalClient New() with default go-libp2p v0.32 resource manager
+        (*rcmgr.resourceManager, mem cap min(1GB, RAM/8)) active.
+Cap: 2 GiB cgroup (REALISTIC: 11x the single-peer ~180 MiB plateau, 160x the
+     ~12 MiB idle footprint; NOT below normal operation like the earlier 150 MiB).
+Attacker: 20 parallel peer identities from one machine, each opening streams that
+          write a 4-byte MaxFrameSize(1MiB) length prefix and never the body.
+Scaling (unbounded, 0 rejections): 1 peer -> ~180 MiB; 8 peers -> ~1.2 GiB and
+          climbing; 20 peers -> OOM at 2 GiB in ~66s. ~100-180 MiB per peer,
+          linear -> OOMs any fixed memory given enough (cheap) peers.
+Mechanism: readFramed does buf := make([]byte, length) with NO stream-scope
+           ReserveMemory, so up to 1 MiB per stream is invisible to the resource
+           manager's memory accounting. ~250,000x amplification (4 bytes -> 1 MiB).

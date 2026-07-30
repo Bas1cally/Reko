@@ -360,3 +360,37 @@ Rules added, sharp:
 The good news is the same as the lesson: this was caught by *us*, by re-running at realistic
 parameters, before a judge caught it. That is the disproof step working as intended — just one
 iteration later than it should have.
+
+### Update, same day: the disproof cuts BOTH ways — I then over-retracted
+
+Within the hour I made the *opposite* error. Having found the 150 MiB OOM was an artifact, I ran a
+**single-peer** flood, saw memory plateau at ~180 MiB, and concluded "no crash, downgrade to a
+hardening note." Wrong again — for the mirror-image reason. A single peer plateaus because the
+default RM bounds *per peer*; but the per-peer bound **stacks linearly across cheap peer identities
+with zero rejections**. The user's one-line instinct — "sounds like you could just overload it?" —
+was right. Re-tested: 8 peers → 1.2 GiB; **20 peers → actual OOM-kill at a realistic 2 GiB cap**;
+growth linear and unbounded ⇒ OOMs any fixed memory given enough (trivially cheap) peers. The finding
+was real all along; I had it, lost it to an over-correction, and the user's push recovered it.
+
+The compound lesson, which is bigger than either half:
+
+> **A resource claim — crash OR safe — is only valid at the right scale AND config. "It crashed"
+> proves nothing if the cap is below normal operation; "it plateaued" proves nothing if you tested
+> one instance of an attack that trivially parallelizes. Before asserting either direction: (a) find
+> the actual limiting mechanism (here: the RM bounds per-peer, and `make([]byte,1MiB)` is uncounted),
+> (b) test at production-realistic limits, and (c) test the attack at the scale a real attacker would
+> use — parallel, sustained, from public data. Then state the result.**
+
+Two concrete tripwires from this:
+1. **When you retract, retract as skeptically as you claimed.** I applied hard scrutiny to kill the
+   over-claim but almost none to the retraction. A downgrade is a finding too; break it the same way.
+2. **Listen to the counterparty's "but couldn't you just…" instinct.** It is a free hypothesis you
+   haven't tested. Twice now the user's plain-language push ("just overload it", "don't turn away")
+   pointed straight at the under-tested dimension. Treat it as a test to run, not an objection to
+   answer.
+
+And the finding itself got *sharper* through the whipsaw: the correct framing is not "no connection
+gating" but a **frame-size memory amplification** — 4 bytes of attacker input reserve ~1 MiB of
+victim memory that the resource manager never accounts for (~250,000×). That precise mechanism only
+became clear because the plateau-vs-OOM contradiction forced me to find *why* the RM didn't bound it.
+The wrong turns located the real bug.
