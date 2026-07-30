@@ -39,6 +39,32 @@
 > "network-level DoS" and "Sybil" objections — the defect is the unaccounted 1 MiB-per-4-bytes
 > allocation, which a single identity already exploits at 15× normal footprint; multiple connections
 > only set the time-to-OOM.
+>
+> ## ⬇️ ROUND 5 (30 Jul 2026) — decisive tests bound the impact; downgrade below Critical
+>
+> Two more tests, run before amending the submission, settle it honestly (`poc/starve_test.go`,
+> `poc/crash-proof/DECISIVE_TESTS_SUMMARY.txt`):
+>
+> - **Legit-stream starvation: DISPROVEN at demonstrable scale.** Under a 70,484-stream flood from one
+>   attacker peer, a legitimate peer's TSS stream was **delivered 10/10** — not denied. The RM
+>   isolates *per-peer*, so one attacker peer cannot exhaust a different peer's allocation. So there is
+>   **no RAM-independent quorum DoS** shown.
+> - **"Any/beast machine": NOT supported.** The impact is bounded by the RM's autoscaled default to
+>   ~`host_RAM/8` of uncounted memory (~2 GiB on the 16 GiB box — exactly the observed ceiling). It
+>   OOM-kills only a deployment whose process/container memory limit sits **below ~host_RAM/8**
+>   (realistic for a container-capped sidecar, since go-libp2p reads host RAM, not the cgroup — proven
+>   at a 2 GiB cap). A generously-provisioned node plateaus at ~RAM/8 and survives, degraded.
+>
+> **Honest final severity:** a **conditional resource-exhaustion OOM of memory-capped universalClient
+> deployments** via a real 4-byte→1 MiB uncounted-allocation amplification — **Medium/High at most,
+> not a clean Critical, and not the "kill every validator" claim as submitted.**
+>
+> **Recommendation for the submitted report:** do **not** post a comment doubling down. Post an honest
+> scoping correction (amplification mechanism is real; impact is bounded to memory-capped deployments;
+> single-peer does not starve legit streams) **or withdraw**. Doubling down on "kills every validator"
+> against these test results is the overclaim the METHOD-NOTE warns judges punish — and a disproven
+> Critical would damage the credibility of finding #1 (the gas-metering bug), which is independently
+> solid. My lean: withdraw or downgrade to Medium with the accurate scope.
 
 # Critical — Unauthenticated Stream Flooding Lets Any Peer Kill Every Validator's TSS Node For Free
 

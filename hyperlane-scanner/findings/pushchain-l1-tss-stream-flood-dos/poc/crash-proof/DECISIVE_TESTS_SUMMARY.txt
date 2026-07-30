@@ -1,0 +1,29 @@
+Decisive re-testing of the TSS stream-flood finding (30 Jul 2026), against the
+REAL default go-libp2p v0.32 resource manager (*rcmgr.resourceManager).
+
+1) Single attacker peer, 90s, uncapped: 253,271 streams, 0 rejections, victim
+   RSS PLATEAUS at ~180 MiB. No crash. (per-peer RM bound)
+
+2) Legit-stream starvation test (starve_test.go): under a 70,484-stream flood
+   from one attacker peer, a legitimate peer's TSS stream was DELIVERED 10/10.
+   NOT starved. Reason: the RM isolates per-peer; one attacker peer cannot
+   exhaust a different peer's allocation.
+
+3) Multi-peer OOM: 8 peers -> ~1.2 GiB; 20 peers -> OOM at a 2 GiB cap (dmesg).
+   40 peers -> plateau ~2 GiB, and attacker-side failures ("connection failed",
+   "context deadline exceeded") — NOT victim RM rejections. The ~2 GiB ceiling
+   = RAM/8 (the RM's autoscaled default) on the 16 GiB test box; also the point
+   my 4-core rig can no longer generate more victim-side load.
+
+CONCLUSION (honest):
+- Real bug: readFramed's `make([]byte, length)` (up to 1 MiB) is UNCOUNTED by
+  the resource manager -> 4 bytes -> ~1 MiB amplification.
+- Impact is BOUNDED by the RM to ~RAM/8 of uncounted memory. It OOM-kills a
+  universalClient deployment whose process/container memory limit is below
+  ~host_RAM/8 (go-libp2p reads host RAM, not the cgroup, so a container capped
+  below that is vulnerable). Proven: OOM at a 2 GiB cap.
+- It does NOT crash a generously-provisioned node (plateaus ~RAM/8, degraded).
+- It does NOT starve a legitimate peer's stream at single-attacker scale.
+- "Kill every validator's TSS node for free" (single peer) is NOT supported.
+  The defensible claim is a conditional resource-exhaustion OOM of
+  memory-capped deployments — Medium/High at most, not a clean Critical.
