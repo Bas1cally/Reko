@@ -227,3 +227,40 @@ takeaway isn't "read more carefully" — 46 other people did that too. It's: onc
 by reading two functions, assume it is not differentiated, and the only way to find out is to try
 to break it (build a harness, disprove your own first hypothesis, escalate the proof past
 "plausible" to "undeniable") before deciding it's worth the write-up time.
+
+## Don't turn away — the StarkNet lesson
+
+Recorded 30 Jul 2026 after the StarkNet HackenProof contest, where the user had to push me back to
+the target **twice** before I did the actual work. This is the mistake to not repeat.
+
+What went wrong, in order:
+1. **Misclassified the target and let the misclassification make the decision.** Called a running
+   contest (69 days, 36 submissions) an "open standing bounty" and recommended turning away on that
+   basis — inverting our own rule (we *prefer* contests). The label did the reasoning; I didn't
+   check the label.
+2. **Dressed up an early exit as discipline.** "It's formally verified / most-audited / caps at
+   High / not our lane" all felt like rigor. They were reasons to *not start*, asserted before the
+   reachability walk, the harness, and the hypothesis tests — i.e. before I had earned any verdict.
+   A negative is only real *after* the full pass. Before it, "it's probably clean" is a guess
+   wearing discipline's clothes.
+3. **Treated "not our language" as a stop.** Cairo/zk wasn't Solidity, so I flinched — after we had
+   already gone into Go/libp2p/cosmos on Push Chain and killed. Not-our-language is never the bar;
+   **not-reachable** and **not-PoC-able** are, and both must be *tested*, not assumed.
+
+What actually worked, once pushed: clone → build and **prove** the full OS prover harness →
+read the Critical-tier source (both syscall paths, both class-hash impls, commitment, DA) → form a
+specific hypothesis per path → test each. Every hypothesis died honestly, most for one structural
+reason. That is a *real* negative, and it produced a reusable weapon (the harness) as a by-product.
+
+The rule, for next time:
+
+> **On a legitimate contest, go all the way in before forming any verdict. Do the reachability
+> walk, stand up the harness, and test a specific hypothesis on the reachable Critical surface —
+> THEN decide. Never let "audited / verified / caps low / not my language" trigger a turn-away
+> before that work is done. Bank only from the far side of the full pass, never from the near side.**
+
+This does **not** license fabricating a finding to avoid "turning away" — the no-fantasy ethic is
+absolute. The two are compatible: go all the way in *and* report the honest result. The failure
+mode being corrected is stopping *before* the work, not stopping *after* it with an honest negative.
+The tell to catch in myself: if I'm recommending "bank / hold pulver dry" and I have **not** yet
+built the harness and tested a hypothesis, I'm turning away early — push in instead.
