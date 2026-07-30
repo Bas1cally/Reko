@@ -42,3 +42,17 @@ Same as #442: do not let it stand as an unqualified Critical. Either (a) build a
 actually demonstrates the attacker winning the store-race against a relayer that tries to
 store-to-own (I believe this fails), or (b) post an honest scoping correction / withdraw.
 Protects the credibility of #440 (the solid gas-metering Critical).
+
+## Validation: the ALT / "alternative route" bypass — CHECKED and REJECTED
+
+Considered whether Solana Address Lookup Tables (v0 txs) let the relayer route
+around the squat by shrinking the finalize tx under 1232 bytes (so the direct
+`finalize_universal_tx` fits, no PDA needed). Verified against execute.rs:
+`ix_data` is a `Vec<u8>` passed as INSTRUCTION DATA (L187, L256), and the ref
+path enforces `require!(ix_data.is_empty())` (L446) precisely to keep large
+ix_data OUT of the transaction. ALTs compress ACCOUNTS, not instruction bytes,
+so for a genuinely large `ix_data` payload they do not help — the ref route IS
+the only route, exactly as the finding claims. This bypass is INVALID; the
+finding is correct on the "only route" point. The sole valid reason the finding
+is weak is the store-race argument above (relayer stores the empty slot, becomes
+owner, attacker can no longer close, finalize succeeds).
