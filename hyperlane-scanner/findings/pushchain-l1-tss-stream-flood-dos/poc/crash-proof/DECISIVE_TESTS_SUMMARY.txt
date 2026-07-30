@@ -48,3 +48,19 @@ CONCLUSION (honest):
       the cgroup) — e.g. a 2 GiB container on a 16 GiB host. Proven at 2 GiB.
    CONFIRMS round-5 conclusion with a hard mechanism: conditional OOM of
    memory-capped deployments, not an unconditional "kill any validator."
+
+5) CPU-EXHAUSTION VECTOR (RAM-independent) — "how long until overload?":
+   The RM caps CONCURRENCY (3033 streams, 189 conns) but NOT the RATE of
+   stream/connection open attempts; each costs protocol negotiation
+   (multistream-select) / crypto handshake CPU, uncapped.
+   - Victim pinned to 1 core, 6 attackers: CPU pegs to 97-99% in ~3-6 seconds
+     and stays there. No grace period.
+   - Victim unpinned (4 cores), 10 attackers sharing the same box: victim uses
+     ~150% CPU (1.5 cores) => the handling PARALLELIZES across cores; it is not a
+     single-threaded bottleneck. On separate attacker machines (real case) the
+     victim would have all cores free and an army could push more cores to 100%.
+   Honest gap: not directly proven that this CPU saturation starves legitimate
+   DKLS/TSS work (single-peer starve test still delivered legit streams 10/10;
+   couldn't generate an isolated all-core army on a shared 4-core box). But this
+   is the stronger, RAM-INDEPENDENT angle for #2 if pursued: rate-based CPU
+   exhaustion via connection/stream churn that the RM does not rate-limit.
