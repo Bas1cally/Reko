@@ -64,3 +64,21 @@ CONCLUSION (honest):
    couldn't generate an isolated all-core army on a shared 4-core box). But this
    is the stronger, RAM-INDEPENDENT angle for #2 if pursued: rate-based CPU
    exhaustion via connection/stream churn that the RM does not rate-limit.
+
+6) CPU-DENIAL HYPOTHESIS ("flood pegs CPU -> validator rejects legit users too"):
+   TESTED with a dedicated legit-peer probe (fresh Connect + NewStream + valid
+   frame each iteration), victim pinned/CPU-capped so the flood fully saturates it,
+   probe on its own core:
+     - victim ~92% of 1 core:      legit 10/10 OK, latency 11ms == baseline (no degradation)
+     - victim 100% of a 0.5-core cap (fully saturated): legit 12/12 OK, latency
+       12ms -> ~44ms avg, spikes to 161ms. DEGRADATION, NOT DENIAL.
+   => Legit peers are NOT rejected even at full CPU saturation. Reason: the RM
+      RESERVES per-peer allocations, so an attacker cannot monopolize a legit
+      peer's slot; the tiny legit work is still scheduled. TSS ceremonies
+      (second-scale timeouts) tolerate ~160ms easily.
+   => The "classic CPU-exhaustion rejects everyone" conclusion is DISPROVEN here.
+   Untested theoretical residual: exhausting ConnsInbound (=189) with ~189
+   persistent attacker connections to block NEW legit connections; the connmgr's
+   trimming/peer-protection likely mitigates, but not verified.
+   Overall #2 verdict UNCHANGED: bounded/conditional resource exhaustion
+   (memory OOM only if capped < host_RAM/8; CPU degradation not denial) = Med/High.
