@@ -147,3 +147,60 @@ scope. The remaining live shot is: finish the OS-harness build, then hunt the
 fresh DA code (aliases/compression/blake/state) for a soundness gap with a real
 runnable PoC, accepting the High-not-Critical ceiling. If the build proves
 infeasible in this environment, the target banks as a documented clean scan.
+
+---
+
+## The OS harness — BUILT and PROVEN (the reusable weapon)
+
+The full sequencer OS execution harness now builds and runs in this environment.
+This is the capability that makes *any* OS-level hypothesis PoC-able (runnable
+PoC = the program's hard submission requirement).
+
+Reproducible steps (on top of the cairo-lang venv above):
+
+```bash
+# The OS build script pins an exact cairo-lang alpha:
+./cairovenv/bin/pip install "cairo-lang==0.14.3a3"
+# re-apply the Py3.11 instances.py field(default_factory=...) patch to the new install
+cd sequencer
+export PATH="$PWD/../cairovenv/bin:$PATH"      # build script needs cairo-compile 0.14.3a3 on PATH
+export RUSTC_WRAPPER="" CARGO_BUILD_RUSTC_WRAPPER=""   # repo config pins sccache; disable it
+cargo test -p starknet_os --no-run             # ~heavy first build (stwo/blockifier/cairo-vm), then cached
+```
+
+Proven live: `starknet_os-<hash>` test binary built (`BUILD_EXIT=0`); an OS test
+(`kzg::test::test_split_commitment_function::case_1`) runs green under the real
+Rust hint processor. 256 OS tests are available, incl. state-diff / commitment /
+KZG / encryption flows — i.e. the fresh DA + state code executes here.
+
+## Evidence-complete verdict (distinct from the earlier premature one)
+
+Went all the way in: cloned, built + proved the OS harness, and read the
+**Critical-tier** source, not just the primitives:
+
+- `state/commitment.cairo` (the state-root computation) funnels its entire
+  soundness into `patricia_update_*` — i.e. `patricia.cairo`, the single
+  most-audited, StarkWare-formally-verified Cairo file. The surrounding hashing
+  (`get_contract_state_hash`, `calculate_global_state_root`) is version-tagged
+  for unique decoding — standard.
+- `execute_syscalls.cairo` is a dispatcher; per-syscall soundness lives in
+  `syscall_impls.cairo` (unread in depth — the one remaining place a *specific*
+  Critical hypothesis could still be formed, now instantly testable via the
+  harness).
+- Fresh DA code (`compression`, `aliases`) is tight and caps at **High** (chain
+  split), not Critical; its one concrete hypothesis (alias `find_element`
+  duplicate-key selection) is **dead by reading** — the alias array is the
+  squashed storage of `ALIAS_CONTRACT_ADDRESS`, so keys are unique by the
+  squash_dict soundness already proven.
+
+**Where this leaves us, per METHOD-NOTE:** the harness is banked as a proven,
+reusable weapon for the contest's 69-day window. But "aim for the kill" means
+driving a *hypothesis* to proof — and right now there is **no live Critical
+hypothesis**: the Critical-tier paths funnel into formally-verified patricia,
+and the reachable fresh surface caps at High with its one hypothesis dead.
+Continuing to read-and-hope from here is exactly the median-non-finding +
+sunk-cost trap the note warns against. The one honest, non-fishing continuation
+is a focused read of `syscall_impls.cairo` for a specific storage-write/call
+soundness gap — worthwhile *only because* the harness can now test it instantly.
+Absent a specific hypothesis surfacing there, the disciplined call is to bank
+this target (evidence-complete, harness preserved) rather than grind.
