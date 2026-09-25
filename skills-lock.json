@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "skills": {
+    "tesseract-motion": {
+      "source": "mirage-hq/Tesseract",
+      "sourceType": "github",
+      "skillPath": "skills/tesseract-motion/SKILL.md",
+      "computedHash": "0f94320f085a80843a88b1537894f30068c7bad07654b8af1398b7695d49f6e6"
+    },
+    "tesseract-video": {
+      "source": "mirage-hq/Tesseract",
+      "sourceType": "github",
+      "skillPath": "skills/tesseract-video/SKILL.md",
+      "computedHash": "a20043c5b0ec176ad3acb77619af609ece9e77574cc0a281653d58aac8b6cd6b"
+    }
+  }
+}

@@ -1,0 +1,2 @@
+# Version-specific schema dumps; regenerate with `tsrct project schema [--document]`.
+*/.tesseract-work/*.schema.json

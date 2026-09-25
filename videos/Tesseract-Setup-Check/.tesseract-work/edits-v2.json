@@ -1,0 +1,10 @@
+[
+  {"type":"setFxPropertyKeyframes","compositionId":"main","property":{"layerId":3,"propertyType":"positionY"},
+   "keyframes":[
+     {"id":"head-y-start","layerTime":250,"value":{"type":"float","value":558},"easing":{"type":"linear"}},
+     {"id":"head-y-end","layerTime":700,"value":{"type":"float","value":522},"easing":{"type":"cubicBezier","x1":0.16,"y1":1,"x2":0.3,"y2":1}}]},
+  {"type":"setFxPropertyKeyframes","compositionId":"main","property":{"layerId":4,"propertyType":"positionY"},
+   "keyframes":[
+     {"id":"cap-y-start","layerTime":500,"value":{"type":"float","value":674},"easing":{"type":"linear"}},
+     {"id":"cap-y-end","layerTime":900,"value":{"type":"float","value":652},"easing":{"type":"cubicBezier","x1":0.16,"y1":1,"x2":0.3,"y2":1}}]}
+]
