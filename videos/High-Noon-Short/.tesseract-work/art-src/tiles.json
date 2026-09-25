@@ -1,0 +1,98 @@
+{
+ "nemmy-ref-portrait": [
+  0,
+  40,
+  401,
+  440
+ ],
+ "yumi-ref-portrait": [
+  0,
+  486,
+  401,
+  886
+ ],
+ "yumi-styled-portrait": [
+  408,
+  486,
+  812,
+  886
+ ],
+ "yumi-ref-full": [
+  816,
+  486,
+  1088,
+  886
+ ],
+ "yumi-styled-full": [
+  1095,
+  486,
+  1322,
+  886
+ ],
+ "aiko-ref-portrait": [
+  0,
+  932,
+  400,
+  1332
+ ],
+ "aiko-styled-portrait": [
+  408,
+  932,
+  811,
+  1332
+ ],
+ "aiko-ref-full": [
+  816,
+  932,
+  1141,
+  1332
+ ],
+ "aiko-styled-full": [
+  1142,
+  932,
+  1376,
+  1332
+ ],
+ "baer-ref-portrait": [
+  0,
+  1378,
+  401,
+  1778
+ ],
+ "baer-styled-portrait": [
+  409,
+  1378,
+  812,
+  1778
+ ],
+ "baer-ref-full": [
+  816,
+  1378,
+  1120,
+  1778
+ ],
+ "baer-styled-full": [
+  1128,
+  1378,
+  1360,
+  1778
+ ],
+ "nemmy-styled-portrait": [
+  408,
+  40,
+  811,
+  440
+ ],
+ "nemmy-styled-full": [
+  1148,
+  40,
+  1376,
+  440
+ ],
+ "nemmy-ref-full": [
+  820,
+  40,
+  1141,
+  440
+ ]
+}

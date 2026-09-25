@@ -1,0 +1,9 @@
+numpy
+pillow
+scipy
+librosa
+soundfile
+fonttools
+matplotlib
+opencv-python-headless
+rembg[cpu]

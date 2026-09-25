@@ -1,0 +1,69 @@
+{
+ "street-sky": [
+  240,
+  440
+ ],
+ "street-sun": [
+  80,
+  80
+ ],
+ "street-mesas": [
+  240,
+  70
+ ],
+ "street-far": [
+  240,
+  120
+ ],
+ "street-facades": [
+  240,
+  440
+ ],
+ "street-ground": [
+  240,
+  90
+ ],
+ "street-fg": [
+  300,
+  440
+ ],
+ "tumbleweed": [
+  28,
+  28,
+  8
+ ],
+ "layout": {
+  "street-sky": [
+   0,
+   0
+  ],
+  "street-far": [
+   0,
+   182
+  ],
+  "street-mesas": [
+   0,
+   206
+  ],
+  "street-facades": [
+   0,
+   0
+  ],
+  "street-ground": [
+   0,
+   350
+  ],
+  "street-fg": [
+   -10,
+   0
+  ],
+  "street-sun-s7": [
+   80,
+   14
+  ],
+  "street-sun-s1": [
+   86,
+   118
+  ]
+ }
+}

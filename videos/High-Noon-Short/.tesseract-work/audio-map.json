@@ -1,0 +1,20 @@
+{
+  "source": "Sources/audio/High_Noon.mp3",
+  "selection": {"sourceStartMs": 152400, "durationMs": 21170, "note": "edit 0 = song 2:32.400"},
+  "tempo": {"bpm": 112.3, "beatSec": 0.534, "firstBeatEdit": 0.248, "downbeatsEdit": [-0.286, 1.85, 3.986, 6.146, 8.282, 10.418, 12.578, 14.714, 16.873, 18.94], "method": "librosa beat_track over the whole song; downbeat phase inferred from the drum re-entry at 18.94 and the breakdown at 14.71"},
+  "cuts": [
+    {"edit": 1.30, "nearestBeat": 1.316, "shot": "Main Street -> Nemmy"},
+    {"edit": 4.53, "nearestBeat": 4.520, "shot": "Nemmy -> Clock"},
+    {"edit": 7.20, "nearestBeat": 7.214, "shot": "Clock -> Yumi"},
+    {"edit": 8.83, "nearestBeat": 8.816, "shot": "Yumi -> Aiko"},
+    {"edit": 12.57, "nearestBeat": 12.578, "shot": "Aiko -> Baer (drums), downbeat"},
+    {"edit": 14.20, "nearestBeat": 14.180, "shot": "Baer -> Band"}
+  ],
+  "events": [
+    {"edit": 5.38, "event": "sung 'Twelve' (user anchor)", "visual": "clock hits 12, shake #1", "sound": "added bell strike"},
+    {"edit": 14.71, "event": "breakdown: energy drops (waveform)", "visual": "band shot settles"},
+    {"edit": 18.94, "event": "full drums re-enter on downbeat (waveform energy shift)", "visual": "title HIGH NOON / NEMMYSIS, shake #2"},
+    {"edit": 20.82, "event": "fade-out start (user)", "visual": "fade to black by 21.17"}
+  ],
+  "verification": "Audio was not auditioned (no playback in this environment). Beat grid and energy events are measured; word onsets are estimates."
+}

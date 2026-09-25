@@ -1,0 +1,33 @@
+{
+ "nemmy": {
+  "bg": "/home/user/Reko/videos/High-Noon-Short/Art/nemmy-bg.png",
+  "char": "/home/user/Reko/videos/High-Noon-Short/Art/nemmy-char.png",
+  "artSize": [
+   192,
+   346
+  ]
+ },
+ "yumi": {
+  "bg": "/home/user/Reko/videos/High-Noon-Short/Art/yumi-bg.png",
+  "char": "/home/user/Reko/videos/High-Noon-Short/Art/yumi-char.png",
+  "artSize": [
+   192,
+   346
+  ]
+ },
+ "aiko": {
+  "bg": "/home/user/Reko/videos/High-Noon-Short/Art/aiko-bg.png",
+  "char": "/home/user/Reko/videos/High-Noon-Short/Art/aiko-char.png",
+  "artSize": [
+   192,
+   346
+  ]
+ },
+ "baer": {
+  "bg": "/home/user/Reko/videos/High-Noon-Short/Art/baer-bg.png",
+  "artSize": [
+   192,
+   346
+  ]
+ }
+}

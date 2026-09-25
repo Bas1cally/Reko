@@ -1,0 +1,16 @@
+{
+  "path": "/home/user/Reko/videos/High-Noon-Short/.tesseract-work/audio/excerpt.wav",
+  "audio_stream": "first audio stream",
+  "integrated_lufs": -15.06,
+  "true_peak_dbtp": -4.89,
+  "loudness_range_lu": 2.9,
+  "working_target": {
+    "integrated_lufs": [
+      -16,
+      -14
+    ],
+    "true_peak_max_dbtp": -1
+  },
+  "within_working_target": true,
+  "note": "Measurement only. Targets are a social-edit starting point, not a platform guarantee. Listen to the mix; silence/very short cues may not have meaningful integrated loudness."
+}

@@ -1,0 +1,1088 @@
+[
+ {
+  "type": "createFxTextLayer",
+  "compositionId": "main",
+  "layerId": 901,
+  "name": "Lyrics 1: High noon, high noon, / meet me there",
+  "insertIndex": 0,
+  "activeRange": {
+   "start": 1450,
+   "duration": 3200
+  },
+  "transform": {
+   "anchorPoint": [
+    0,
+    0
+   ],
+   "position": [
+    0,
+    0
+   ],
+   "scale": [
+    100,
+    100
+   ],
+   "rotation": 0,
+   "opacity": 100
+  },
+  "sourceText": {
+   "text": "High noon, high noon,\nmeet me there",
+   "fontFamily": "Pixelify Sans",
+   "fontStyle": "Bold",
+   "fontSize": 80,
+   "fillColor": [
+    0.9804,
+    0.9412,
+    0.8392,
+    1.0
+   ],
+   "strokeEnabled": true,
+   "strokeColor": [
+    0.1412,
+    0.0706,
+    0.0353,
+    1.0
+   ],
+   "strokeWidth": 12,
+   "strokeOverFill": false,
+   "justification": "center",
+   "boxText": true,
+   "boxPosition": [
+    60,
+    1300
+   ],
+   "boxSize": [
+    960,
+    300
+   ],
+   "verticalAlign": "top"
+  },
+  "animators": [
+   {
+    "id": 5002,
+    "name": "Sung words turn gold",
+    "fillColor": [
+     1.0,
+     0.7765,
+     0.2039,
+     1.0
+    ],
+    "selectors": [
+     {
+      "id": 5003,
+      "start": 0,
+      "end": 0,
+      "units": "index",
+      "basedOn": "words",
+      "mode": "add",
+      "amount": 1,
+      "shape": "square"
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "type": "setFxLayerStyleAnimator",
+  "compositionId": "main",
+  "layerId": 901,
+  "itemId": 5003,
+  "propertyName": "end",
+  "dependencies": [],
+  "animator": {
+   "type": "jsScript",
+   "layerTimeJsCode": "var t=input.time.seconds; var on=[0.15, 0.43, 1.27, 1.48, 2.01, 2.28, 2.53]; var n=0; for(var i=0;i<on.length;i++){if(t>=on[i])n=i+1;} return n;"
+  }
+ },
+ {
+  "type": "setFxPropertyKeyframes",
+  "compositionId": "main",
+  "property": {
+   "layerId": 901,
+   "propertyType": "opacity"
+  },
+  "keyframes": [
+   {
+    "id": "lyr1-in0",
+    "layerTime": 0,
+    "value": {
+     "type": "float",
+     "value": 0
+    },
+    "easing": {
+     "type": "linear"
+    }
+   },
+   {
+    "id": "lyr1-in1",
+    "layerTime": 100,
+    "value": {
+     "type": "float",
+     "value": 100
+    },
+    "easing": {
+     "type": "linear"
+    }
+   },
+   {
+    "id": "lyr1-out0",
+    "layerTime": 3080,
+    "value": {
+     "type": "float",
+     "value": 100
+    },
+    "easing": {
+     "type": "linear"
+    }
+   },
+   {
+    "id": "lyr1-out1",
+    "layerTime": 3200,
+    "value": {
+     "type": "float",
+     "value": 0
+    },
+    "easing": {
+     "type": "linear"
+    }
+   }
+  ]
+ },
+ {
+  "type": "createFxTextLayer",
+  "compositionId": "main",
+  "layerId": 902,
+  "name": "Lyrics 2: Twelve o'clock, / if you dare",
+  "insertIndex": 0,
+  "activeRange": {
+   "start": 5150,
+   "duration": 3750
+  },
+  "transform": {
+   "anchorPoint": [
+    0,
+    0
+   ],
+   "position": [
+    0,
+    0
+   ],
+   "scale": [
+    100,
+    100
+   ],
+   "rotation": 0,
+   "opacity": 100
+  },
+  "sourceText": {
+   "text": "Twelve o'clock,\nif you dare",
+   "fontFamily": "Pixelify Sans",
+   "fontStyle": "Bold",
+   "fontSize": 80,
+   "fillColor": [
+    0.9804,
+    0.9412,
+    0.8392,
+    1.0
+   ],
+   "strokeEnabled": true,
+   "strokeColor": [
+    0.1412,
+    0.0706,
+    0.0353,
+    1.0
+   ],
+   "strokeWidth": 12,
+   "strokeOverFill": false,
+   "justification": "center",
+   "boxText": true,
+   "boxPosition": [
+    60,
+    1300
+   ],
+   "boxSize": [
+    960,
+    300
+   ],
+   "verticalAlign": "top"
+  },
+  "animators": [
+   {
+    "id": 5004,
+    "name": "Sung words turn gold",
+    "fillColor": [
+     1.0,
+     0.7765,
+     0.2039,
+     1.0
+    ],
+    "selectors": [
+     {
+      "id": 5005,
+      "start": 0,
+      "end": 0,
+      "units": "index",
+      "basedOn": "words",
+      "mode": "add",
+      "amount": 1,
+      "shape": "square"
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "type": "setFxLayerStyleAnimator",
+  "compositionId": "main",
+  "layerId": 902,
+  "itemId": 5005,
+  "propertyName": "end",
+  "dependencies": [],
+  "animator": {
+   "type": "jsScript",
+   "layerTimeJsCode": "var t=input.time.seconds; var on=[0.23, 0.46, 2.57, 2.85, 3.13]; var n=0; for(var i=0;i<on.length;i++){if(t>=on[i])n=i+1;} return n;"
+  }
+ },
+ {
+  "type": "setFxPropertyKeyframes",
+  "compositionId": "main",
+  "property": {
+   "layerId": 902,
+   "propertyType": "opacity"
+  },
+  "keyframes": [
+   {
+    "id": "lyr2-in0",
+    "layerTime": 0,
+    "value": {
+     "type": "float",
+     "value": 0
+    },
+    "easing": {
+     "type": "linear"
+    }
+   },
+   {
+    "id": "lyr2-in1",
+    "layerTime": 100,
+    "value": {
+     "type": "float",
+     "value": 100
+    },
+    "easing": {
+     "type": "linear"
+    }
+   },
+   {
+    "id": "lyr2-out0",
+    "layerTime": 3630,
+    "value": {
+     "type": "float",
+     "value": 100
+    },
+    "easing": {
+     "type": "linear"
+    }
+   },
+   {
+    "id": "lyr2-out1",
+    "layerTime": 3750,
+    "value": {
+     "type": "float",
+     "value": 0
+    },
+    "easing": {
+     "type": "linear"
+    }
+   }
+  ]
+ },
+ {
+  "type": "createFxTextLayer",
+  "compositionId": "main",
+  "layerId": 903,
+  "name": "Lyrics 3: Hands up, / here it comes",
+  "insertIndex": 0,
+  "activeRange": {
+   "start": 8900,
+   "duration": 3650
+  },
+  "transform": {
+   "anchorPoint": [
+    0,
+    0
+   ],
+   "position": [
+    0,
+    0
+   ],
+   "scale": [
+    100,
+    100
+   ],
+   "rotation": 0,
+   "opacity": 100
+  },
+  "sourceText": {
+   "text": "Hands up,\nhere it comes",
+   "fontFamily": "Pixelify Sans",
+   "fontStyle": "Bold",
+   "fontSize": 80,
+   "fillColor": [
+    0.9804,
+    0.9412,
+    0.8392,
+    1.0
+   ],
+   "strokeEnabled": true,
+   "strokeColor": [
+    0.1412,
+    0.0706,
+    0.0353,
+    1.0
+   ],
+   "strokeWidth": 12,
+   "strokeOverFill": false,
+   "justification": "center",
+   "boxText": true,
+   "boxPosition": [
+    60,
+    1300
+   ],
+   "boxSize": [
+    960,
+    300
+   ],
+   "verticalAlign": "top"
+  },
+  "animators": [
+   {
+    "id": 5006,
+    "name": "Sung words turn gold",
+    "fillColor": [
+     1.0,
+     0.7765,
+     0.2039,
+     1.0
+    ],
+    "selectors": [
+     {
+      "id": 5007,
+      "start": 0,
+      "end": 0,
+      "units": "index",
+      "basedOn": "words",
+      "mode": "add",
+      "amount": 1,
+      "shape": "square"
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "type": "setFxLayerStyleAnimator",
+  "compositionId": "main",
+  "layerId": 903,
+  "itemId": 5007,
+  "propertyName": "end",
+  "dependencies": [],
+  "animator": {
+   "type": "jsScript",
+   "layerTimeJsCode": "var t=input.time.seconds; var on=[0.23, 0.46, 2.59, 2.85, 3.12]; var n=0; for(var i=0;i<on.length;i++){if(t>=on[i])n=i+1;} return n;"
+  }
+ },
+ {
+  "type": "setFxPropertyKeyframes",
+  "compositionId": "main",
+  "property": {
+   "layerId": 903,
+   "propertyType": "opacity"
+  },
+  "keyframes": [
+   {
+    "id": "lyr3-in0",
+    "layerTime": 0,
+    "value": {
+     "type": "float",
+     "value": 0
+    },
+    "easing": {
+     "type": "linear"
+    }
+   },
+   {
+    "id": "lyr3-in1",
+    "layerTime": 100,
+    "value": {
+     "type": "float",
+     "value": 100
+    },
+    "easing": {
+     "type": "linear"
+    }
+   },
+   {
+    "id": "lyr3-out0",
+    "layerTime": 3530,
+    "value": {
+     "type": "float",
+     "value": 100
+    },
+    "easing": {
+     "type": "linear"
+    }
+   },
+   {
+    "id": "lyr3-out1",
+    "layerTime": 3650,
+    "value": {
+     "type": "float",
+     "value": 0
+    },
+    "easing": {
+     "type": "linear"
+    }
+   }
+  ]
+ },
+ {
+  "type": "createFxTextLayer",
+  "compositionId": "main",
+  "layerId": 904,
+  "name": "Lyrics 4: No place to run",
+  "insertIndex": 0,
+  "activeRange": {
+   "start": 12600,
+   "duration": 1620
+  },
+  "transform": {
+   "anchorPoint": [
+    0,
+    0
+   ],
+   "position": [
+    0,
+    0
+   ],
+   "scale": [
+    100,
+    100
+   ],
+   "rotation": 0,
+   "opacity": 100
+  },
+  "sourceText": {
+   "text": "No place to run",
+   "fontFamily": "Pixelify Sans",
+   "fontStyle": "Bold",
+   "fontSize": 80,
+   "fillColor": [
+    0.9804,
+    0.9412,
+    0.8392,
+    1.0
+   ],
+   "strokeEnabled": true,
+   "strokeColor": [
+    0.1412,
+    0.0706,
+    0.0353,
+    1.0
+   ],
+   "strokeWidth": 12,
+   "strokeOverFill": false,
+   "justification": "center",
+   "boxText": true,
+   "boxPosition": [
+    60,
+    1300
+   ],
+   "boxSize": [
+    960,
+    300
+   ],
+   "verticalAlign": "top"
+  },
+  "animators": [
+   {
+    "id": 5008,
+    "name": "Sung words turn gold",
+    "fillColor": [
+     1.0,
+     0.7765,
+     0.2039,
+     1.0
+    ],
+    "selectors": [
+     {
+      "id": 5009,
+      "start": 0,
+      "end": 0,
+      "units": "index",
+      "basedOn": "words",
+      "mode": "add",
+      "amount": 1,
+      "shape": "square"
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "type": "setFxLayerStyleAnimator",
+  "compositionId": "main",
+  "layerId": 904,
+  "itemId": 5009,
+  "propertyName": "end",
+  "dependencies": [],
+  "animator": {
+   "type": "jsScript",
+   "layerTimeJsCode": "var t=input.time.seconds; var on=[0.1, 0.51, 0.77, 1.05]; var n=0; for(var i=0;i<on.length;i++){if(t>=on[i])n=i+1;} return n;"
+  }
+ },
+ {
+  "type": "setFxPropertyKeyframes",
+  "compositionId": "main",
+  "property": {
+   "layerId": 904,
+   "propertyType": "opacity"
+  },
+  "keyframes": [
+   {
+    "id": "lyr4-in0",
+    "layerTime": 0,
+    "value": {
+     "type": "float",
+     "value": 0
+    },
+    "easing": {
+     "type": "linear"
+    }
+   },
+   {
+    "id": "lyr4-in1",
+    "layerTime": 100,
+    "value": {
+     "type": "float",
+     "value": 100
+    },
+    "easing": {
+     "type": "linear"
+    }
+   },
+   {
+    "id": "lyr4-out0",
+    "layerTime": 1500,
+    "value": {
+     "type": "float",
+     "value": 100
+    },
+    "easing": {
+     "type": "linear"
+    }
+   },
+   {
+    "id": "lyr4-out1",
+    "layerTime": 1620,
+    "value": {
+     "type": "float",
+     "value": 0
+    },
+    "easing": {
+     "type": "linear"
+    }
+   }
+  ]
+ },
+ {
+  "type": "createFxTextLayer",
+  "compositionId": "main",
+  "layerId": 905,
+  "name": "Lyrics 5: High noon, high noon, / here I come",
+  "insertIndex": 0,
+  "activeRange": {
+   "start": 14300,
+   "duration": 5250
+  },
+  "transform": {
+   "anchorPoint": [
+    0,
+    0
+   ],
+   "position": [
+    0,
+    0
+   ],
+   "scale": [
+    100,
+    100
+   ],
+   "rotation": 0,
+   "opacity": 100
+  },
+  "sourceText": {
+   "text": "High noon, high noon,\nhere I come",
+   "fontFamily": "Pixelify Sans",
+   "fontStyle": "Bold",
+   "fontSize": 80,
+   "fillColor": [
+    0.9804,
+    0.9412,
+    0.8392,
+    1.0
+   ],
+   "strokeEnabled": true,
+   "strokeColor": [
+    0.1412,
+    0.0706,
+    0.0353,
+    1.0
+   ],
+   "strokeWidth": 12,
+   "strokeOverFill": false,
+   "justification": "center",
+   "boxText": true,
+   "boxPosition": [
+    60,
+    1300
+   ],
+   "boxSize": [
+    960,
+    300
+   ],
+   "verticalAlign": "top"
+  },
+  "animators": [
+   {
+    "id": 5010,
+    "name": "Sung words turn gold",
+    "fillColor": [
+     1.0,
+     0.7765,
+     0.2039,
+     1.0
+    ],
+    "selectors": [
+     {
+      "id": 5011,
+      "start": 0,
+      "end": 0,
+      "units": "index",
+      "basedOn": "words",
+      "mode": "add",
+      "amount": 1,
+      "shape": "square"
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "type": "setFxLayerStyleAnimator",
+  "compositionId": "main",
+  "layerId": 905,
+  "itemId": 5011,
+  "propertyName": "end",
+  "dependencies": [],
+  "animator": {
+   "type": "jsScript",
+   "layerTimeJsCode": "var t=input.time.seconds; var on=[0.17, 0.42, 1.27, 1.86, 3.87, 4.17, 4.64]; var n=0; for(var i=0;i<on.length;i++){if(t>=on[i])n=i+1;} return n;"
+  }
+ },
+ {
+  "type": "setFxPropertyKeyframes",
+  "compositionId": "main",
+  "property": {
+   "layerId": 905,
+   "propertyType": "opacity"
+  },
+  "keyframes": [
+   {
+    "id": "lyr5-in0",
+    "layerTime": 0,
+    "value": {
+     "type": "float",
+     "value": 0
+    },
+    "easing": {
+     "type": "linear"
+    }
+   },
+   {
+    "id": "lyr5-in1",
+    "layerTime": 100,
+    "value": {
+     "type": "float",
+     "value": 100
+    },
+    "easing": {
+     "type": "linear"
+    }
+   },
+   {
+    "id": "lyr5-out0",
+    "layerTime": 5130,
+    "value": {
+     "type": "float",
+     "value": 100
+    },
+    "easing": {
+     "type": "linear"
+    }
+   },
+   {
+    "id": "lyr5-out1",
+    "layerTime": 5250,
+    "value": {
+     "type": "float",
+     "value": 0
+    },
+    "easing": {
+     "type": "linear"
+    }
+   }
+  ]
+ },
+ {
+  "type": "createFxTextLayer",
+  "compositionId": "main",
+  "layerId": 906,
+  "name": "Title shadow: HIGH NOON",
+  "insertIndex": 0,
+  "activeRange": {
+   "start": 18920,
+   "duration": 2250
+  },
+  "transform": {
+   "anchorPoint": [
+    0,
+    0
+   ],
+   "position": [
+    0,
+    0
+   ],
+   "scale": [
+    100,
+    100
+   ],
+   "rotation": 0,
+   "opacity": 100
+  },
+  "sourceText": {
+   "text": "HIGH NOON",
+   "fontFamily": "Press Start 2P",
+   "fontStyle": "Regular",
+   "fontSize": 96,
+   "fillColor": [
+    0.8706,
+    0.5569,
+    0.1176,
+    1.0
+   ],
+   "strokeEnabled": true,
+   "strokeColor": [
+    0.1412,
+    0.0706,
+    0.0353,
+    1.0
+   ],
+   "strokeWidth": 12,
+   "strokeOverFill": false,
+   "justification": "center",
+   "boxText": true,
+   "boxPosition": [
+    12,
+    312
+   ],
+   "boxSize": [
+    1080,
+    140
+   ],
+   "verticalAlign": "top"
+  },
+  "animators": [
+   {
+    "id": 5012,
+    "name": "Letter reveal",
+    "opacity": 0,
+    "selectors": [
+     {
+      "id": 5013,
+      "start": 0,
+      "end": 99,
+      "units": "index",
+      "basedOn": "characters",
+      "mode": "add",
+      "amount": 1,
+      "shape": "square"
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "type": "setFxLayerStyleAnimator",
+  "compositionId": "main",
+  "layerId": 906,
+  "itemId": 5013,
+  "propertyName": "start",
+  "dependencies": [],
+  "animator": {
+   "type": "jsScript",
+   "layerTimeJsCode": "var t=input.time.seconds; return t<0.0?0:Math.floor((t-0.0)/0.035)+1;"
+  }
+ },
+ {
+  "type": "createFxTextLayer",
+  "compositionId": "main",
+  "layerId": 907,
+  "name": "Title: HIGH NOON",
+  "insertIndex": 0,
+  "activeRange": {
+   "start": 18920,
+   "duration": 2250
+  },
+  "transform": {
+   "anchorPoint": [
+    0,
+    0
+   ],
+   "position": [
+    0,
+    0
+   ],
+   "scale": [
+    100,
+    100
+   ],
+   "rotation": 0,
+   "opacity": 100
+  },
+  "sourceText": {
+   "text": "HIGH NOON",
+   "fontFamily": "Press Start 2P",
+   "fontStyle": "Regular",
+   "fontSize": 96,
+   "fillColor": [
+    1.0,
+    0.7765,
+    0.2039,
+    1.0
+   ],
+   "strokeEnabled": true,
+   "strokeColor": [
+    0.1412,
+    0.0706,
+    0.0353,
+    1.0
+   ],
+   "strokeWidth": 12,
+   "strokeOverFill": false,
+   "justification": "center",
+   "boxText": true,
+   "boxPosition": [
+    0,
+    300
+   ],
+   "boxSize": [
+    1080,
+    140
+   ],
+   "verticalAlign": "top"
+  },
+  "animators": [
+   {
+    "id": 5014,
+    "name": "Letter reveal",
+    "opacity": 0,
+    "selectors": [
+     {
+      "id": 5015,
+      "start": 0,
+      "end": 99,
+      "units": "index",
+      "basedOn": "characters",
+      "mode": "add",
+      "amount": 1,
+      "shape": "square"
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "type": "setFxLayerStyleAnimator",
+  "compositionId": "main",
+  "layerId": 907,
+  "itemId": 5015,
+  "propertyName": "start",
+  "dependencies": [],
+  "animator": {
+   "type": "jsScript",
+   "layerTimeJsCode": "var t=input.time.seconds; return t<0.0?0:Math.floor((t-0.0)/0.035)+1;"
+  }
+ },
+ {
+  "type": "createFxTextLayer",
+  "compositionId": "main",
+  "layerId": 908,
+  "name": "Title: NEMMYSIS",
+  "insertIndex": 0,
+  "activeRange": {
+   "start": 18920,
+   "duration": 2250
+  },
+  "transform": {
+   "anchorPoint": [
+    0,
+    0
+   ],
+   "position": [
+    0,
+    0
+   ],
+   "scale": [
+    100,
+    100
+   ],
+   "rotation": 0,
+   "opacity": 100
+  },
+  "sourceText": {
+   "text": "NEMMYSIS",
+   "fontFamily": "Press Start 2P",
+   "fontStyle": "Regular",
+   "fontSize": 48,
+   "fillColor": [
+    0.9804,
+    0.9412,
+    0.8392,
+    1.0
+   ],
+   "strokeEnabled": true,
+   "strokeColor": [
+    0.1412,
+    0.0706,
+    0.0353,
+    1.0
+   ],
+   "strokeWidth": 10,
+   "strokeOverFill": false,
+   "justification": "center",
+   "boxText": true,
+   "boxPosition": [
+    0,
+    450
+   ],
+   "boxSize": [
+    1080,
+    80
+   ],
+   "verticalAlign": "top"
+  },
+  "animators": [
+   {
+    "id": 5016,
+    "name": "Letter reveal",
+    "opacity": 0,
+    "selectors": [
+     {
+      "id": 5017,
+      "start": 0,
+      "end": 99,
+      "units": "index",
+      "basedOn": "characters",
+      "mode": "add",
+      "amount": 1,
+      "shape": "square"
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "type": "setFxLayerStyleAnimator",
+  "compositionId": "main",
+  "layerId": 908,
+  "itemId": 5017,
+  "propertyName": "start",
+  "dependencies": [],
+  "animator": {
+   "type": "jsScript",
+   "layerTimeJsCode": "var t=input.time.seconds; return t<0.62?0:Math.floor((t-0.62)/0.045)+1;"
+  }
+ },
+ {
+  "type": "createFxRectLayer",
+  "compositionId": "main",
+  "layerId": 909,
+  "name": "Fade to black (20.82 - 21.17 s)",
+  "insertIndex": 0,
+  "activeRange": {
+   "start": 20820,
+   "duration": 350
+  },
+  "transform": {
+   "anchorPoint": [
+    0,
+    0
+   ],
+   "position": [
+    0,
+    0
+   ],
+   "scale": [
+    100,
+    100
+   ],
+   "rotation": 0,
+   "opacity": 0
+  },
+  "rect": {
+   "size": [
+    1080,
+    1920
+   ],
+   "fillColor": [
+    0,
+    0,
+    0,
+    1
+   ]
+  }
+ },
+ {
+  "type": "setFxPropertyKeyframes",
+  "compositionId": "main",
+  "property": {
+   "layerId": 909,
+   "propertyType": "opacity"
+  },
+  "keyframes": [
+   {
+    "id": "fade-0",
+    "layerTime": 0,
+    "value": {
+     "type": "float",
+     "value": 0
+    },
+    "easing": {
+     "type": "linear"
+    }
+   },
+   {
+    "id": "fade-1",
+    "layerTime": 350,
+    "value": {
+     "type": "float",
+     "value": 100
+    },
+    "easing": {
+     "type": "linear"
+    }
+   }
+  ]
+ }
+]
