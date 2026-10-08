@@ -1,0 +1,415 @@
+{
+ "stills": [],
+ "cycles": [
+  {
+   "id": "gunner_se_walk",
+   "model": "minimax-h3-max-turbo-image-to-video",
+   "params": {
+    "prompt": "2D game sprite animation, like a treadmill: the gunslinger immediately starts walking in place and keeps walking for the whole clip, a steady repeating walk cycle at a relaxed pace (heel-to-toe steps, arms swing opposite the legs, slight up-and-down bob, the gun stays resting on his right shoulder and never covers his face, black hair bounces). He always faces diagonally toward the bottom-right corner of the frame (isometric three-quarter front view from above, the same angle as the first frame), never turning to a side view. He stays centred and does not travel across the frame. Locked static camera, flat solid magenta background with no glow or light on it, no ground shadow, the exact art style, detail and sharpness of the first frame, same character design as the first frame.",
+    "negativePrompt": "side view, profile view, turning around, glowing halo around the character, light spill on the background, camera movement, zoom, travelling across the frame, ground shadow, drop shadow, background change, extra characters, blur, 3D render, slowing down, stopping, standing still",
+    "startImage": "raw/gunner_se_still.png",
+    "duration": "3",
+    "aspectRatio": "1:1",
+    "generateAudio": false
+   }
+  },
+  {
+   "id": "gunner_se_run",
+   "model": "minimax-h3-max-turbo-image-to-video",
+   "params": {
+    "prompt": "2D game sprite animation, like a treadmill: the gunslinger immediately starts running in place and keeps running for the whole clip, a steady repeating run cycle (knees high, arms pumping, torso leaning forward, both feet leave the ground between steps, the gun stays resting on his right shoulder and never covers his face, black hair bounces). He always faces diagonally toward the bottom-right corner of the frame (isometric three-quarter front view from above, the same angle as the first frame), never turning to a side view. He stays centred and does not travel across the frame. Locked static camera, flat solid magenta background with no glow or light on it, no ground shadow, the exact art style, detail and sharpness of the first frame, same character design as the first frame.",
+    "negativePrompt": "side view, profile view, turning around, glowing halo around the character, light spill on the background, camera movement, zoom, travelling across the frame, ground shadow, drop shadow, background change, extra characters, blur, 3D render, slowing down, stopping, standing still",
+    "startImage": "raw/gunner_se_still.png",
+    "duration": "3",
+    "aspectRatio": "1:1",
+    "generateAudio": false
+   }
+  },
+  {
+   "id": "gunner_se_idle",
+   "model": "minimax-h3-max-turbo-image-to-video",
+   "params": {
+    "prompt": "2D game sprite animation: the gunslinger stands idle in place, a subtle breathing loop: chest rises and falls, a slight weight shift, the gun rests on his right shoulder and he rolls that shoulder slightly, his left hand stays on his hip, the gun never covers his face. Feet stay planted. Calm, small motion. He always faces diagonally toward the bottom-right corner of the frame (isometric three-quarter front view from above, the same angle as the first frame), never turning to a side view. He stays centred and does not travel across the frame. Locked static camera, flat solid magenta background with no glow or light on it, no ground shadow, the exact art style, detail and sharpness of the first frame, same character design as the first frame.",
+    "negativePrompt": "side view, profile view, turning around, glowing halo around the character, light spill on the background, camera movement, zoom, travelling across the frame, ground shadow, drop shadow, background change, extra characters, blur, 3D render",
+    "startImage": "raw/gunner_se_still.png",
+    "duration": "3",
+    "endImage": "raw/gunner_se_still.png",
+    "aspectRatio": "1:1",
+    "generateAudio": false
+   }
+  },
+  {
+   "id": "gunner_se_attack",
+   "model": "minimax-h3-max-turbo-image-to-video",
+   "params": {
+    "prompt": "2D game sprite animation: the gunslinger performs one one-handed shot from the shoulder: keeping the gun on his right shoulder and holding it with his right hand only, he tips it forward so the twin barrels point ahead in the direction he faces, fires one blast with a sharp recoil kick and a small muzzle flash and puff of smoke, then swings it back to rest on his shoulder with the barrels pointing backwards; the gun stays beside his head and never passes in front of his face, then returns to the starting ready pose. Snappy anticipation, fast strike, short follow-through. He always faces diagonally toward the bottom-right corner of the frame (isometric three-quarter front view from above, the same angle as the first frame), never turning to a side view. He stays centred and does not travel across the frame. Locked static camera, flat solid magenta background with no glow or light on it, no ground shadow, the exact art style, detail and sharpness of the first frame, same character design as the first frame.",
+    "negativePrompt": "side view, profile view, turning around, glowing halo around the character, light spill on the background, camera movement, zoom, travelling across the frame, ground shadow, drop shadow, background change, extra characters, blur, 3D render",
+    "startImage": "raw/gunner_se_still.png",
+    "duration": "3",
+    "endImage": "raw/gunner_se_still.png",
+    "aspectRatio": "1:1",
+    "generateAudio": false
+   }
+  },
+  {
+   "id": "gunner_ne_walk",
+   "model": "minimax-h3-max-turbo-image-to-video",
+   "params": {
+    "prompt": "2D game sprite animation, like a treadmill: the gunslinger immediately starts walking in place and keeps walking for the whole clip, a steady repeating walk cycle at a relaxed pace (heel-to-toe steps, arms swing opposite the legs, slight up-and-down bob, the gun stays resting on his right shoulder and never covers his face, black hair bounces). He always faces diagonally toward the top-right corner of the frame, seen three-quarters from behind (isometric view from above, the same angle as the first frame), never turning around. He stays centred and does not travel across the frame. Locked static camera, flat solid magenta background with no glow or light on it, no ground shadow, the exact art style, detail and sharpness of the first frame, same character design as the first frame.",
+    "negativePrompt": "side view, profile view, turning around, glowing halo around the character, light spill on the background, camera movement, zoom, travelling across the frame, ground shadow, drop shadow, background change, extra characters, blur, 3D render, slowing down, stopping, standing still",
+    "startImage": "raw/gunner_ne_still.png",
+    "duration": "3",
+    "aspectRatio": "1:1",
+    "generateAudio": false
+   }
+  },
+  {
+   "id": "gunner_ne_run",
+   "model": "minimax-h3-max-turbo-image-to-video",
+   "params": {
+    "prompt": "2D game sprite animation seen from behind. The gunslinger runs away from the viewer, toward the top-right corner of the screen, on a treadmill so he stays in place. We keep seeing his back, the studded leather jacket, his messy black hair and the long gun lying on his right shoulder at the same diagonal angle as the first frame for the whole clip: his left shoulder is closer to us than his right. Steady repeating run cycle, knees high, arms pumping, both feet leave the ground briefly between steps, the gun stays resting on his right shoulder and never covers his face, black hair bounces. Locked static camera, flat solid magenta background, no ground shadow, the exact art style, detail and sharpness of the first frame.",
+    "negativePrompt": "glowing halo around the character, light spill on the background, side view, profile view, facing right, facing the camera, turning, rotating, camera movement, zoom, travelling across the frame, ground shadow, background change, blur, 3D render, slowing down, stopping",
+    "startImage": "raw/gunner_ne_still.png",
+    "endImage": "raw/gunner_ne_still.png",
+    "duration": "5",
+    "aspectRatio": "1:1",
+    "generateAudio": false
+   }
+  },
+  {
+   "id": "gunner_ne_idle",
+   "model": "minimax-h3-max-turbo-image-to-video",
+   "params": {
+    "prompt": "2D game sprite animation: the gunslinger stands idle in place, a subtle breathing loop: chest rises and falls, a slight weight shift, the gun rests on his right shoulder and he rolls that shoulder slightly, his left hand stays on his hip, the gun never covers his face. Feet stay planted. Calm, small motion. He always faces diagonally toward the top-right corner of the frame, seen three-quarters from behind (isometric view from above, the same angle as the first frame), never turning around. He stays centred and does not travel across the frame. Locked static camera, flat solid magenta background with no glow or light on it, no ground shadow, the exact art style, detail and sharpness of the first frame, same character design as the first frame.",
+    "negativePrompt": "side view, profile view, turning around, glowing halo around the character, light spill on the background, camera movement, zoom, travelling across the frame, ground shadow, drop shadow, background change, extra characters, blur, 3D render",
+    "startImage": "raw/gunner_ne_still.png",
+    "duration": "3",
+    "endImage": "raw/gunner_ne_still.png",
+    "aspectRatio": "1:1",
+    "generateAudio": false
+   }
+  },
+  {
+   "id": "gunner_ne_attack",
+   "model": "minimax-h3-max-turbo-image-to-video",
+   "params": {
+    "prompt": "2D game sprite animation: the gunslinger performs one one-handed shot from the shoulder: keeping the gun on his right shoulder and holding it with his right hand only, he tips it forward so the twin barrels point ahead in the direction he faces, fires one blast with a sharp recoil kick and a small muzzle flash and puff of smoke, then swings it back to rest on his shoulder with the barrels pointing backwards; the gun stays beside his head and never passes in front of his face, then returns to the starting ready pose. Snappy anticipation, fast strike, short follow-through. He always faces diagonally toward the top-right corner of the frame, seen three-quarters from behind (isometric view from above, the same angle as the first frame), never turning around. He stays centred and does not travel across the frame. Locked static camera, flat solid magenta background with no glow or light on it, no ground shadow, the exact art style, detail and sharpness of the first frame, same character design as the first frame.",
+    "negativePrompt": "side view, profile view, turning around, glowing halo around the character, light spill on the background, camera movement, zoom, travelling across the frame, ground shadow, drop shadow, background change, extra characters, blur, 3D render",
+    "startImage": "raw/gunner_ne_still.png",
+    "duration": "3",
+    "endImage": "raw/gunner_ne_still.png",
+    "aspectRatio": "1:1",
+    "generateAudio": false
+   }
+  },
+  {
+   "id": "gunner_e_walk",
+   "model": "minimax-h3-max-turbo-image-to-video",
+   "params": {
+    "prompt": "2D game sprite animation in side profile. The gunslinger walks toward the right edge of the screen, on a treadmill so he stays in place. We keep seeing his right side in profile at the same angle as the first frame for the whole clip: his face points at the right edge of the frame and we never see his chest or his back. Steady repeating walk cycle at a relaxed pace, heel-to-toe steps, arms swing opposite the legs, slight up-and-down bob, the gun stays resting on his right shoulder and never covers his face, black hair bounces. Locked static camera, flat solid magenta background, no ground shadow, the exact art style, detail and sharpness of the first frame.",
+    "negativePrompt": "glowing halo around the character, light spill on the background, front view, three-quarter view, facing the camera, turning toward the camera, back view, turning, rotating, camera movement, zoom, travelling across the frame, ground shadow, background change, blur, 3D render, slowing down, stopping",
+    "startImage": "raw/gunner_e_still.png",
+    "endImage": "raw/gunner_e_still.png",
+    "duration": "5",
+    "aspectRatio": "1:1",
+    "generateAudio": false
+   }
+  },
+  {
+   "id": "gunner_e_run",
+   "model": "minimax-h3-max-turbo-image-to-video",
+   "params": {
+    "prompt": "2D game sprite animation in side profile. The gunslinger runs toward the right edge of the screen, on a treadmill so he stays in place. We keep seeing his right side in profile at the same angle as the first frame for the whole clip: his face points at the right edge of the frame and we never see his chest or his back. Steady repeating run cycle, knees high, arms pumping, torso leaning forward, both feet leave the ground briefly between steps, the gun stays resting on his right shoulder and never covers his face, black hair bounces. Locked static camera, flat solid magenta background, no ground shadow, the exact art style, detail and sharpness of the first frame.",
+    "negativePrompt": "glowing halo around the character, light spill on the background, front view, three-quarter view, facing the camera, turning toward the camera, back view, turning, rotating, camera movement, zoom, travelling across the frame, ground shadow, background change, blur, 3D render, slowing down, stopping",
+    "startImage": "raw/gunner_e_still.png",
+    "endImage": "raw/gunner_e_still.png",
+    "duration": "5",
+    "aspectRatio": "1:1",
+    "generateAudio": false
+   }
+  },
+  {
+   "id": "gunner_e_idle",
+   "model": "minimax-h3-max-turbo-image-to-video",
+   "params": {
+    "prompt": "2D game sprite animation: the gunslinger stands idle in place, a subtle breathing loop: chest rises and falls, a slight weight shift, the gun rests on his right shoulder and he rolls that shoulder slightly, his left hand stays on his hip, the gun never covers his face. Feet stay planted. Calm, small motion. He always faces right in a flat side-on profile, the same angle as the first frame, never turning toward the camera. He stays centred and does not travel across the frame. Locked static camera, flat solid magenta background with no glow or light on it, no ground shadow, the exact art style, detail and sharpness of the first frame, same character design as the first frame.",
+    "negativePrompt": "front view, back view, three-quarter view, facing the camera, turning around, glowing halo around the character, light spill on the background, camera movement, zoom, travelling across the frame, ground shadow, drop shadow, background change, extra characters, blur, 3D render",
+    "startImage": "raw/gunner_e_still.png",
+    "duration": "3",
+    "endImage": "raw/gunner_e_still.png",
+    "aspectRatio": "1:1",
+    "generateAudio": false
+   }
+  },
+  {
+   "id": "gunner_e_attack",
+   "model": "minimax-h3-max-turbo-image-to-video",
+   "params": {
+    "prompt": "2D game sprite animation: the gunslinger performs one one-handed shot from the shoulder: keeping the gun on his right shoulder and holding it with his right hand only, he tips it forward so the twin barrels point ahead in the direction he faces, fires one blast with a sharp recoil kick and a small muzzle flash and puff of smoke, then swings it back to rest on his shoulder with the barrels pointing backwards; the gun stays beside his head and never passes in front of his face, then returns to the starting ready pose. Snappy anticipation, fast strike, short follow-through. He always faces right in a flat side-on profile, the same angle as the first frame, never turning toward the camera. He stays centred and does not travel across the frame. Locked static camera, flat solid magenta background with no glow or light on it, no ground shadow, the exact art style, detail and sharpness of the first frame, same character design as the first frame.",
+    "negativePrompt": "front view, back view, three-quarter view, facing the camera, turning around, glowing halo around the character, light spill on the background, camera movement, zoom, travelling across the frame, ground shadow, drop shadow, background change, extra characters, blur, 3D render",
+    "startImage": "raw/gunner_e_still.png",
+    "duration": "3",
+    "endImage": "raw/gunner_e_still.png",
+    "aspectRatio": "1:1",
+    "generateAudio": false
+   }
+  },
+  {
+   "id": "gunner_s_walk",
+   "model": "minimax-h3-max-turbo-image-to-video",
+   "params": {
+    "prompt": "2D game sprite animation seen from the front. The gunslinger walks straight at the camera, toward the viewer and straight down the screen, on a treadmill so he stays in place. He never turns sideways: we keep seeing his face and chest straight on at the same angle as the first frame for the whole clip: both shoulders stay level and his face stays in the centre of his body, never turning to either side. Steady repeating walk cycle at a relaxed pace, heel-to-toe steps, arms swing opposite the legs, slight up-and-down bob, the gun stays resting on his right shoulder and never covers his face, black hair bounces. Locked static camera, flat solid magenta background with no glow or light on it, no ground shadow, the exact art style, detail and sharpness of the first frame.",
+    "negativePrompt": "glowing halo around the character, light spill on the background, side view, profile view, running sideways, walking sideways, moving to the right, moving to the left, three-quarter view, turning, rotating, back view, camera movement, zoom, travelling across the frame, ground shadow, background change, blur, 3D render, slowing down, stopping",
+    "startImage": "raw/gunner_s_still.png",
+    "endImage": "raw/gunner_s_still.png",
+    "duration": "5",
+    "aspectRatio": "1:1",
+    "generateAudio": false
+   }
+  },
+  {
+   "id": "gunner_s_run",
+   "model": "minimax-h3-max-turbo-image-to-video",
+   "params": {
+    "prompt": "2D game sprite animation seen from the front. The gunslinger runs straight at the camera, toward the viewer and straight down the screen, on a treadmill so he stays in place. He never turns sideways: we keep seeing his face and chest straight on at the same angle as the first frame for the whole clip: both shoulders stay level and his face stays in the centre of his body, never turning to either side. Steady repeating run cycle, knees high, arms pumping, torso leaning forward, both feet leave the ground briefly between steps, the gun stays resting on his right shoulder and never covers his face, black hair bounces. Locked static camera, flat solid magenta background with no glow or light on it, no ground shadow, the exact art style, detail and sharpness of the first frame.",
+    "negativePrompt": "glowing halo around the character, light spill on the background, side view, profile view, running sideways, walking sideways, moving to the right, moving to the left, three-quarter view, turning, rotating, back view, camera movement, zoom, travelling across the frame, ground shadow, background change, blur, 3D render, slowing down, stopping",
+    "startImage": "raw/gunner_s_still.png",
+    "endImage": "raw/gunner_s_still.png",
+    "duration": "5",
+    "aspectRatio": "1:1",
+    "generateAudio": false
+   }
+  },
+  {
+   "id": "gunner_s_idle",
+   "model": "minimax-h3-max-turbo-image-to-video",
+   "params": {
+    "prompt": "2D game sprite animation: the gunslinger stands idle in place, a subtle breathing loop: chest rises and falls, a slight weight shift, the gun rests on his right shoulder and he rolls that shoulder slightly, his left hand stays on his hip, the gun never covers his face. Feet stay planted. Calm, small motion. He always faces straight toward the viewer, seen exactly from the front with his face and chest in the centre of his body (the same angle as the first frame), never turning to either side. He stays centred and does not travel across the frame. Locked static camera, flat solid magenta background with no glow or light on it, no ground shadow, the exact art style, detail and sharpness of the first frame, same character design as the first frame.",
+    "negativePrompt": "side view, profile view, back view, turning around, glowing halo around the character, light spill on the background, camera movement, zoom, travelling across the frame, ground shadow, drop shadow, background change, extra characters, blur, 3D render",
+    "startImage": "raw/gunner_s_still.png",
+    "duration": "3",
+    "endImage": "raw/gunner_s_still.png",
+    "aspectRatio": "1:1",
+    "generateAudio": false
+   }
+  },
+  {
+   "id": "gunner_s_attack",
+   "model": "minimax-h3-max-turbo-image-to-video",
+   "params": {
+    "prompt": "2D game sprite animation: the gunslinger performs one one-handed shot from the shoulder: keeping the gun on his right shoulder and holding it with his right hand only, he tips it forward so the twin muzzles point straight at the viewer, shoulders square to the camera, fires one blast with a sharp recoil kick and a small muzzle flash, then swings it back to rest on his shoulder with the barrels pointing backwards; the gun never passes in front of his face, then returns to the starting ready pose. Snappy anticipation, fast strike, short follow-through. He always faces straight toward the viewer, seen exactly from the front with his face and chest in the centre of his body (the same angle as the first frame), never turning to either side. He stays centred and does not travel across the frame. Locked static camera, flat solid magenta background with no glow or light on it, no ground shadow, the exact art style, detail and sharpness of the first frame, same character design as the first frame.",
+    "negativePrompt": "side view, profile view, back view, turning around, glowing halo around the character, light spill on the background, camera movement, zoom, travelling across the frame, ground shadow, drop shadow, background change, extra characters, blur, 3D render",
+    "startImage": "raw/gunner_s_still.png",
+    "duration": "3",
+    "endImage": "raw/gunner_s_still.png",
+    "aspectRatio": "1:1",
+    "generateAudio": false
+   }
+  },
+  {
+   "id": "gunner_n_walk",
+   "model": "minimax-h3-max-turbo-image-to-video",
+   "params": {
+    "prompt": "2D game sprite animation seen from behind. The gunslinger walks away from the viewer, straight up the screen, on a treadmill so he stays in place. We keep seeing his back, the studded leather jacket, his messy black hair and the long gun lying on his right shoulder at the same angle as the first frame for the whole clip: both shoulders stay level and his spine stays in the centre of his body. Each step pushes forward, away from us: the back foot lifts its heel toward us, swings forward and plants farther from the camera. Steady repeating walk cycle at a relaxed pace, arms swing opposite the legs, slight up-and-down bob, the gun stays resting on his right shoulder and never covers his face, black hair bounces. Locked static camera, flat solid magenta background with no glow or light on it, no ground shadow, the exact art style, detail and sharpness of the first frame.",
+    "negativePrompt": "glowing halo around the character, light spill on the background, side view, profile view, facing right, facing the camera, turning, rotating, camera movement, zoom, travelling across the frame, ground shadow, background change, blur, 3D render, slowing down, stopping, walking backwards, walking toward the camera",
+    "startImage": "raw/gunner_n_still.png",
+    "endImage": "raw/gunner_n_still.png",
+    "duration": "5",
+    "aspectRatio": "1:1",
+    "generateAudio": false
+   }
+  },
+  {
+   "id": "gunner_n_run",
+   "model": "minimax-h3-max-turbo-image-to-video",
+   "params": {
+    "prompt": "2D game sprite animation seen from behind. The gunslinger runs away from the viewer, straight up the screen, on a treadmill so he stays in place. We keep seeing his back, the studded leather jacket, his messy black hair and the long gun lying on his right shoulder at the same angle as the first frame for the whole clip: both shoulders stay level and his spine stays in the centre of his body. Steady repeating run cycle, knees high, arms pumping, both feet leave the ground briefly between steps, the gun stays resting on his right shoulder and never covers his face, black hair bounces. Locked static camera, flat solid magenta background, no ground shadow, the exact art style, detail and sharpness of the first frame.",
+    "negativePrompt": "glowing halo around the character, light spill on the background, side view, profile view, facing right, facing the camera, turning, rotating, camera movement, zoom, travelling across the frame, ground shadow, background change, blur, 3D render, slowing down, stopping",
+    "startImage": "raw/gunner_n_still.png",
+    "endImage": "raw/gunner_n_still.png",
+    "duration": "5",
+    "aspectRatio": "1:1",
+    "generateAudio": false
+   }
+  },
+  {
+   "id": "gunner_n_idle",
+   "model": "minimax-h3-max-turbo-image-to-video",
+   "params": {
+    "prompt": "2D game sprite animation: the gunslinger stands idle in place, a subtle breathing loop: chest rises and falls, a slight weight shift, the gun rests on his right shoulder and he rolls that shoulder slightly, his left hand stays on his hip, the gun never covers his face. Feet stay planted. Calm, small motion. He always faces straight away from the viewer, seen exactly from behind with his spine in the centre of his body (the same angle as the first frame), never turning to either side. He stays centred and does not travel across the frame. Locked static camera, flat solid magenta background with no glow or light on it, no ground shadow, the exact art style, detail and sharpness of the first frame, same character design as the first frame.",
+    "negativePrompt": "side view, profile view, facing the camera, turning around, glowing halo around the character, light spill on the background, camera movement, zoom, travelling across the frame, ground shadow, drop shadow, background change, extra characters, blur, 3D render",
+    "startImage": "raw/gunner_n_still.png",
+    "duration": "3",
+    "endImage": "raw/gunner_n_still.png",
+    "aspectRatio": "1:1",
+    "generateAudio": false
+   }
+  },
+  {
+   "id": "gunner_n_attack",
+   "model": "minimax-h3-max-turbo-image-to-video",
+   "params": {
+    "prompt": "2D game sprite animation: the gunslinger performs one one-handed shot from the shoulder seen from behind: keeping the gun on his right shoulder and holding it with his right hand only, he tips it forward so the barrels point straight up the screen away from the viewer, fires one blast with a sharp recoil kick and a small muzzle flash beyond him, then swings it back to rest on his shoulder with the barrels pointing back toward us; the gun never passes in front of his face, then returns to the starting ready pose. Snappy anticipation, fast strike, short follow-through. He always faces straight away from the viewer, seen exactly from behind with his spine in the centre of his body (the same angle as the first frame), never turning to either side. He stays centred and does not travel across the frame. Locked static camera, flat solid magenta background with no glow or light on it, no ground shadow, the exact art style, detail and sharpness of the first frame, same character design as the first frame.",
+    "negativePrompt": "side view, profile view, facing the camera, turning around, glowing halo around the character, light spill on the background, camera movement, zoom, travelling across the frame, ground shadow, drop shadow, background change, extra characters, blur, 3D render",
+    "startImage": "raw/gunner_n_still.png",
+    "duration": "3",
+    "endImage": "raw/gunner_n_still.png",
+    "aspectRatio": "1:1",
+    "generateAudio": false
+   }
+  },
+  {
+   "id": "gunner_sw_walk",
+   "model": "minimax-h3-max-turbo-image-to-video",
+   "params": {
+    "prompt": "2D game sprite animation, like a treadmill: the gunslinger immediately starts walking in place and keeps walking for the whole clip, a steady repeating walk cycle at a relaxed pace (heel-to-toe steps, arms swing opposite the legs, slight up-and-down bob, the gun stays resting on his right shoulder and never covers his face, black hair bounces). He always faces diagonally toward the bottom-left corner of the frame (isometric three-quarter front view from above, the same angle as the first frame), never turning to a side view. He stays centred and does not travel across the frame. Locked static camera, flat solid magenta background with no glow or light on it, no ground shadow, the exact art style, detail and sharpness of the first frame, same character design as the first frame.",
+    "negativePrompt": "side view, profile view, turning around, glowing halo around the character, light spill on the background, camera movement, zoom, travelling across the frame, ground shadow, drop shadow, background change, extra characters, blur, 3D render, slowing down, stopping, standing still",
+    "startImage": "raw/gunner_sw_still.png",
+    "duration": "3",
+    "aspectRatio": "1:1",
+    "generateAudio": false
+   }
+  },
+  {
+   "id": "gunner_sw_run",
+   "model": "minimax-h3-max-turbo-image-to-video",
+   "params": {
+    "prompt": "2D game sprite animation, like a treadmill: the gunslinger immediately starts running in place and keeps running for the whole clip, a steady repeating run cycle (knees high, arms pumping, torso leaning forward, both feet leave the ground between steps, the gun stays resting on his right shoulder and never covers his face, black hair bounces). He always faces diagonally toward the bottom-left corner of the frame (isometric three-quarter front view from above, the same angle as the first frame), never turning to a side view. He stays centred and does not travel across the frame. Locked static camera, flat solid magenta background with no glow or light on it, no ground shadow, the exact art style, detail and sharpness of the first frame, same character design as the first frame.",
+    "negativePrompt": "side view, profile view, turning around, glowing halo around the character, light spill on the background, camera movement, zoom, travelling across the frame, ground shadow, drop shadow, background change, extra characters, blur, 3D render, slowing down, stopping, standing still",
+    "startImage": "raw/gunner_sw_still.png",
+    "duration": "3",
+    "aspectRatio": "1:1",
+    "generateAudio": false
+   }
+  },
+  {
+   "id": "gunner_sw_idle",
+   "model": "minimax-h3-max-turbo-image-to-video",
+   "params": {
+    "prompt": "2D game sprite animation: the gunslinger stands idle in place, a subtle breathing loop: chest rises and falls, a slight weight shift, the gun rests on his right shoulder and he rolls that shoulder slightly, his left hand stays on his hip, the gun never covers his face. Feet stay planted. Calm, small motion. He always faces diagonally toward the bottom-left corner of the frame (isometric three-quarter front view from above, the same angle as the first frame), never turning to a side view. He stays centred and does not travel across the frame. Locked static camera, flat solid magenta background with no glow or light on it, no ground shadow, the exact art style, detail and sharpness of the first frame, same character design as the first frame.",
+    "negativePrompt": "side view, profile view, turning around, glowing halo around the character, light spill on the background, camera movement, zoom, travelling across the frame, ground shadow, drop shadow, background change, extra characters, blur, 3D render",
+    "startImage": "raw/gunner_sw_still.png",
+    "duration": "3",
+    "endImage": "raw/gunner_sw_still.png",
+    "aspectRatio": "1:1",
+    "generateAudio": false
+   }
+  },
+  {
+   "id": "gunner_sw_attack",
+   "model": "minimax-h3-max-turbo-image-to-video",
+   "params": {
+    "prompt": "2D game sprite animation: the gunslinger performs one one-handed shot from the shoulder: keeping the gun on his right shoulder and holding it with his right hand only, he tips it forward so the twin barrels point ahead in the direction he faces, fires one blast with a sharp recoil kick and a small muzzle flash and puff of smoke, then swings it back to rest on his shoulder with the barrels pointing backwards; the gun stays beside his head and never passes in front of his face, then returns to the starting ready pose. Snappy anticipation, fast strike, short follow-through. He always faces diagonally toward the bottom-left corner of the frame (isometric three-quarter front view from above, the same angle as the first frame), never turning to a side view. He stays centred and does not travel across the frame. Locked static camera, flat solid magenta background with no glow or light on it, no ground shadow, the exact art style, detail and sharpness of the first frame, same character design as the first frame.",
+    "negativePrompt": "side view, profile view, turning around, glowing halo around the character, light spill on the background, camera movement, zoom, travelling across the frame, ground shadow, drop shadow, background change, extra characters, blur, 3D render",
+    "startImage": "raw/gunner_sw_still.png",
+    "duration": "3",
+    "endImage": "raw/gunner_sw_still.png",
+    "aspectRatio": "1:1",
+    "generateAudio": false
+   }
+  },
+  {
+   "id": "gunner_nw_walk",
+   "model": "minimax-h3-max-turbo-image-to-video",
+   "params": {
+    "prompt": "2D game sprite animation, like a treadmill: the gunslinger immediately starts walking in place and keeps walking for the whole clip, a steady repeating walk cycle at a relaxed pace (heel-to-toe steps, arms swing opposite the legs, slight up-and-down bob, the gun stays resting on his right shoulder and never covers his face, black hair bounces). He always faces diagonally toward the top-left corner of the frame, seen three-quarters from behind (isometric view from above, the same angle as the first frame), never turning around. He stays centred and does not travel across the frame. Locked static camera, flat solid magenta background with no glow or light on it, no ground shadow, the exact art style, detail and sharpness of the first frame, same character design as the first frame.",
+    "negativePrompt": "side view, profile view, turning around, glowing halo around the character, light spill on the background, camera movement, zoom, travelling across the frame, ground shadow, drop shadow, background change, extra characters, blur, 3D render, slowing down, stopping, standing still",
+    "startImage": "raw/gunner_nw_still.png",
+    "duration": "3",
+    "aspectRatio": "1:1",
+    "generateAudio": false
+   }
+  },
+  {
+   "id": "gunner_nw_run",
+   "model": "minimax-h3-max-turbo-image-to-video",
+   "params": {
+    "prompt": "2D game sprite animation seen from behind. The gunslinger runs away from the viewer, toward the top-left corner of the screen, on a treadmill so he stays in place. We keep seeing his back, the studded leather jacket, his messy black hair and the long gun lying on his right shoulder at the same diagonal angle as the first frame for the whole clip: his right shoulder is closer to us than his left. Steady repeating run cycle, knees high, arms pumping, both feet leave the ground briefly between steps, the gun stays resting on his right shoulder and never covers his face, black hair bounces. Locked static camera, flat solid magenta background, no ground shadow, the exact art style, detail and sharpness of the first frame.",
+    "negativePrompt": "glowing halo around the character, light spill on the background, side view, profile view, facing right, facing the camera, turning, rotating, camera movement, zoom, travelling across the frame, ground shadow, background change, blur, 3D render, slowing down, stopping",
+    "startImage": "raw/gunner_nw_still.png",
+    "endImage": "raw/gunner_nw_still.png",
+    "duration": "5",
+    "aspectRatio": "1:1",
+    "generateAudio": false
+   }
+  },
+  {
+   "id": "gunner_nw_idle",
+   "model": "minimax-h3-max-turbo-image-to-video",
+   "params": {
+    "prompt": "2D game sprite animation: the gunslinger stands idle in place, a subtle breathing loop: chest rises and falls, a slight weight shift, the gun rests on his right shoulder and he rolls that shoulder slightly, his left hand stays on his hip, the gun never covers his face. Feet stay planted. Calm, small motion. He always faces diagonally toward the top-left corner of the frame, seen three-quarters from behind (isometric view from above, the same angle as the first frame), never turning around. He stays centred and does not travel across the frame. Locked static camera, flat solid magenta background with no glow or light on it, no ground shadow, the exact art style, detail and sharpness of the first frame, same character design as the first frame.",
+    "negativePrompt": "side view, profile view, turning around, glowing halo around the character, light spill on the background, camera movement, zoom, travelling across the frame, ground shadow, drop shadow, background change, extra characters, blur, 3D render",
+    "startImage": "raw/gunner_nw_still.png",
+    "duration": "3",
+    "endImage": "raw/gunner_nw_still.png",
+    "aspectRatio": "1:1",
+    "generateAudio": false
+   }
+  },
+  {
+   "id": "gunner_nw_attack",
+   "model": "minimax-h3-max-turbo-image-to-video",
+   "params": {
+    "prompt": "2D game sprite animation: the gunslinger performs one one-handed shot from the shoulder: keeping the gun on his right shoulder and holding it with his right hand only, he tips it forward so the twin barrels point ahead in the direction he faces, fires one blast with a sharp recoil kick and a small muzzle flash and puff of smoke, then swings it back to rest on his shoulder with the barrels pointing backwards; the gun stays beside his head and never passes in front of his face, then returns to the starting ready pose. Snappy anticipation, fast strike, short follow-through. He always faces diagonally toward the top-left corner of the frame, seen three-quarters from behind (isometric view from above, the same angle as the first frame), never turning around. He stays centred and does not travel across the frame. Locked static camera, flat solid magenta background with no glow or light on it, no ground shadow, the exact art style, detail and sharpness of the first frame, same character design as the first frame.",
+    "negativePrompt": "side view, profile view, turning around, glowing halo around the character, light spill on the background, camera movement, zoom, travelling across the frame, ground shadow, drop shadow, background change, extra characters, blur, 3D render",
+    "startImage": "raw/gunner_nw_still.png",
+    "duration": "3",
+    "endImage": "raw/gunner_nw_still.png",
+    "aspectRatio": "1:1",
+    "generateAudio": false
+   }
+  },
+  {
+   "id": "gunner_w_walk",
+   "model": "minimax-h3-max-turbo-image-to-video",
+   "params": {
+    "prompt": "2D game sprite animation in side profile. The gunslinger walks toward the left edge of the screen, on a treadmill so he stays in place. We keep seeing his left side in profile at the same angle as the first frame for the whole clip: his face points at the left edge of the frame and we never see his chest or his back. Steady repeating walk cycle at a relaxed pace, heel-to-toe steps, arms swing opposite the legs, slight up-and-down bob, the gun stays resting on his right shoulder and never covers his face, black hair bounces. Locked static camera, flat solid magenta background, no ground shadow, the exact art style, detail and sharpness of the first frame.",
+    "negativePrompt": "glowing halo around the character, light spill on the background, front view, three-quarter view, facing the camera, turning toward the camera, back view, turning, rotating, camera movement, zoom, travelling across the frame, ground shadow, background change, blur, 3D render, slowing down, stopping",
+    "startImage": "raw/gunner_w_still.png",
+    "endImage": "raw/gunner_w_still.png",
+    "duration": "5",
+    "aspectRatio": "1:1",
+    "generateAudio": false
+   }
+  },
+  {
+   "id": "gunner_w_run",
+   "model": "minimax-h3-max-turbo-image-to-video",
+   "params": {
+    "prompt": "2D game sprite animation in side profile. The gunslinger runs toward the left edge of the screen, on a treadmill so he stays in place. We keep seeing his left side in profile at the same angle as the first frame for the whole clip: his face points at the left edge of the frame and we never see his chest or his back. Steady repeating run cycle, knees high, arms pumping, torso leaning forward, both feet leave the ground briefly between steps, the gun stays resting on his right shoulder and never covers his face, black hair bounces. Locked static camera, flat solid magenta background, no ground shadow, the exact art style, detail and sharpness of the first frame.",
+    "negativePrompt": "glowing halo around the character, light spill on the background, front view, three-quarter view, facing the camera, turning toward the camera, back view, turning, rotating, camera movement, zoom, travelling across the frame, ground shadow, background change, blur, 3D render, slowing down, stopping",
+    "startImage": "raw/gunner_w_still.png",
+    "endImage": "raw/gunner_w_still.png",
+    "duration": "5",
+    "aspectRatio": "1:1",
+    "generateAudio": false
+   }
+  },
+  {
+   "id": "gunner_w_idle",
+   "model": "minimax-h3-max-turbo-image-to-video",
+   "params": {
+    "prompt": "2D game sprite animation: the gunslinger stands idle in place, a subtle breathing loop: chest rises and falls, a slight weight shift, the gun rests on his right shoulder and he rolls that shoulder slightly, his left hand stays on his hip, the gun never covers his face. Feet stay planted. Calm, small motion. He always faces left in a flat side-on profile, the same angle as the first frame, never turning toward the camera. He stays centred and does not travel across the frame. Locked static camera, flat solid magenta background with no glow or light on it, no ground shadow, the exact art style, detail and sharpness of the first frame, same character design as the first frame.",
+    "negativePrompt": "front view, back view, three-quarter view, facing the camera, turning around, glowing halo around the character, light spill on the background, camera movement, zoom, travelling across the frame, ground shadow, drop shadow, background change, extra characters, blur, 3D render",
+    "startImage": "raw/gunner_w_still.png",
+    "duration": "3",
+    "endImage": "raw/gunner_w_still.png",
+    "aspectRatio": "1:1",
+    "generateAudio": false
+   }
+  },
+  {
+   "id": "gunner_w_attack",
+   "model": "minimax-h3-max-turbo-image-to-video",
+   "params": {
+    "prompt": "2D game sprite animation: the gunslinger performs one one-handed shot from the shoulder: keeping the gun on his right shoulder and holding it with his right hand only, he tips it forward so the twin barrels point ahead in the direction he faces, fires one blast with a sharp recoil kick and a small muzzle flash and puff of smoke, then swings it back to rest on his shoulder with the barrels pointing backwards; the gun stays beside his head and never passes in front of his face, then returns to the starting ready pose. Snappy anticipation, fast strike, short follow-through. He always faces left in a flat side-on profile, the same angle as the first frame, never turning toward the camera. He stays centred and does not travel across the frame. Locked static camera, flat solid magenta background with no glow or light on it, no ground shadow, the exact art style, detail and sharpness of the first frame, same character design as the first frame.",
+    "negativePrompt": "front view, back view, three-quarter view, facing the camera, turning around, glowing halo around the character, light spill on the background, camera movement, zoom, travelling across the frame, ground shadow, drop shadow, background change, extra characters, blur, 3D render",
+    "startImage": "raw/gunner_w_still.png",
+    "duration": "3",
+    "endImage": "raw/gunner_w_still.png",
+    "aspectRatio": "1:1",
+    "generateAudio": false
+   }
+  }
+ ]
+}

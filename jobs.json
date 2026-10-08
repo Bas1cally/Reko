@@ -1,0 +1,74 @@
+{
+ "gunner_se_walk": {
+  "model": "minimax-h3-max-turbo-image-to-video",
+  "queue_id": "01a11bb6-0726-792d-928a-b078bfc1bd51",
+  "download_url": null,
+  "duration": "5s",
+  "queued_at": "2026-10-08T13:31:16",
+  "file": "/home/user/Reko/clips/gunner_se_walk.mp4"
+ },
+ "gunner_se_attack": {
+  "model": "minimax-h3-max-turbo-image-to-video",
+  "queue_id": "01a11bb6-08c2-72ae-8705-67b43334a130",
+  "download_url": null,
+  "duration": "5s",
+  "queued_at": "2026-10-08T13:31:17",
+  "file": "/home/user/Reko/clips/gunner_se_attack.mp4"
+ },
+ "gunner_ne_run": {
+  "model": "minimax-h3-max-turbo-image-to-video",
+  "queue_id": "01a11bb6-0a3f-78ef-a497-9e6d780672cd",
+  "download_url": null,
+  "duration": "5s",
+  "queued_at": "2026-10-08T13:31:17",
+  "file": "/home/user/Reko/clips/gunner_ne_run.mp4"
+ },
+ "gunner_se_walk__flux": {
+  "model": "flux-3-image-to-video",
+  "queue_id": "01a11bb7-2749-743b-a7aa-a1c0ae465e61",
+  "download_url": null,
+  "duration": "5s",
+  "queued_at": "2026-10-08T13:32:30",
+  "file": "/home/user/Reko/clips/gunner_se_walk__flux.mp4"
+ },
+ "gunner_se_attack__flux": {
+  "model": "flux-3-first-last-frame-to-video",
+  "queue_id": "01a11bb7-28fd-74a3-a79e-9e88da0d989e",
+  "download_url": null,
+  "duration": "5s",
+  "queued_at": "2026-10-08T13:32:30",
+  "file": "/home/user/Reko/clips/gunner_se_attack__flux.mp4"
+ },
+ "gunner_ne_run__flux": {
+  "model": "flux-3-first-last-frame-to-video",
+  "queue_id": "01a11bb7-2a98-7ea6-80e3-6557373cae23",
+  "download_url": null,
+  "duration": "5s",
+  "queued_at": "2026-10-08T13:32:31",
+  "file": "/home/user/Reko/clips/gunner_ne_run__flux.mp4"
+ },
+ "gunner_se_walk__wan": {
+  "model": "wan-3-0-image-to-video",
+  "queue_id": "01a11bb7-2ede-7e81-96a9-0bc31fa71466",
+  "download_url": null,
+  "duration": "5s",
+  "queued_at": "2026-10-08T13:32:32",
+  "file": "/home/user/Reko/clips/gunner_se_walk__wan.mp4"
+ },
+ "gunner_se_attack__wan": {
+  "model": "wan-3-0-image-to-video",
+  "queue_id": "01a11bb7-30a4-7e27-9ee1-c05440e9a89c",
+  "download_url": null,
+  "duration": "5s",
+  "queued_at": "2026-10-08T13:32:32",
+  "file": "/home/user/Reko/clips/gunner_se_attack__wan.mp4"
+ },
+ "gunner_ne_run__wan": {
+  "model": "wan-3-0-image-to-video",
+  "queue_id": "01a11bb7-327c-72e8-9e20-41b0ed3dcd06",
+  "download_url": null,
+  "duration": "5s",
+  "queued_at": "2026-10-08T13:32:33",
+  "failed": "error: POST /video/retrieve -> HTTP 422: {\"error\":\"Video generation failed due to a provider-side error. Credits have been refunded.\",\"credits_refunded\":true}"
+ }
+}

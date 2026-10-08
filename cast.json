@@ -1,0 +1,67 @@
+{
+ "_comment": "The gunner, 8 directions, all generated (the gun sits on his right shoulder, so mirrors would swap it). HD, not pixel art. 'stills' hold local first-frame paths (Venice route, see references/venice.md).",
+ "canvas": 960,
+ "fig_frac": 0.58,
+ "base_frac": 0.82,
+ "frames": 8,
+ "key": "magenta",
+ "camera": "isometric",
+ "cycles": [
+  "walk",
+  "run",
+  "idle",
+  "attack"
+ ],
+ "style": "semi-realistic painted 3D game character render like the reference images, dark weathered leather with brass and gold metal details, soft top-left lighting, clean readable silhouette",
+ "facings": [
+  "se",
+  "ne",
+  "e",
+  "s",
+  "n",
+  "sw",
+  "nw",
+  "w"
+ ],
+ "heroes": {
+  "gunner": {
+   "character": "a rugged gunslinger with messy black hair and stubble. Open black shirt, cropped dark brown studded leather biker jacket with brass buckles and zips, brass-buckled belt with pouches and a thigh holster, dark worn trousers, tall brown leather boots with brass buckles, black leather gloves. He carries a huge ornate double-barrelled gun of black metal with gold filigree resting on his RIGHT shoulder, gripping its rear handle with his right hand; the long barrels point backwards over his shoulder, behind his head. His left hand rests on his hip.",
+   "back": "we see his back, the studded jacket and the long gun lying on his right shoulder",
+   "who": "gunslinger",
+   "pronoun": "He",
+   "extra": ", the gun stays resting on his right shoulder and never covers his face, black hair bounces",
+   "idle": "the gun rests on his right shoulder and he rolls that shoulder slightly, his left hand stays on his hip, the gun never covers his face",
+   "attack": "one-handed shot from the shoulder: keeping the gun on his right shoulder and holding it with his right hand only, he tips it forward so the twin barrels point ahead in the direction he faces, fires one blast with a sharp recoil kick and a small muzzle flash and puff of smoke, then swings it back to rest on his shoulder with the barrels pointing backwards; the gun stays beside his head and never passes in front of his face",
+   "attack_facing": {
+    "s": "one-handed shot from the shoulder: keeping the gun on his right shoulder and holding it with his right hand only, he tips it forward so the twin muzzles point straight at the viewer, shoulders square to the camera, fires one blast with a sharp recoil kick and a small muzzle flash, then swings it back to rest on his shoulder with the barrels pointing backwards; the gun never passes in front of his face",
+    "n": "one-handed shot from the shoulder seen from behind: keeping the gun on his right shoulder and holding it with his right hand only, he tips it forward so the barrels point straight up the screen away from the viewer, fires one blast with a sharp recoil kick and a small muzzle flash beyond him, then swings it back to rest on his shoulder with the barrels pointing back toward us; the gun never passes in front of his face"
+   },
+   "back_view": "his back, the studded leather jacket, his messy black hair and the long gun lying on his right shoulder",
+   "notes": "He carries the gun on his right shoulder and holds it with his right hand; his left hand rests on his hip; the holster sits on his right thigh. The gun never covers his face: the round brass end of the gun sits low in front of his right shoulder, below his chin, and the barrels go back behind his head, so his whole face stays visible.",
+   "turn_notes": {
+    "s": "The gun lies on his right shoulder, on the left of the image, its barrels reaching back behind his head toward the right.",
+    "n": "The gun lies on his right shoulder, on the right of the image, its barrels reaching back toward us across the left of his head.",
+    "e": "Exact side profile facing right: his nose points at the right edge of the image. The gun rests on his right shoulder tilted steeply, like a rifle carried at slope arms: his right hand holds the round brass rear end LOW, at the height of his chest, just in front of his right shoulder, and the barrels rise diagonally up and back behind his head toward the upper left of the image. His face, chin and mouth are completely free, with background visible between his face and the gun. His left hand rests on his hip on the far side.",
+    "w": "Use the THIRD figure of the first reference image (the side view facing left) as the exact pose and angle: exact side profile facing left, his nose pointing at the left edge of the image, seen slightly from above. Change only one thing: the gun is tilted more steeply, its brass rear end held lower at chest height, so his face, chin and mouth are completely free with background visible between face and gun; the barrels rise diagonally up and back behind his head toward the upper right of the image.",
+    "se": "The gun lies on his right shoulder, on the left of the image, barrels pointing back behind his head.",
+    "sw": "The gun lies on his right shoulder, on the left of the image, barrels pointing back behind his head to the right.",
+    "ne": "The gun lies on his right shoulder, on the right of the image, barrels pointing back toward us.",
+    "nw": "The gun lies on his right shoulder, on the right of the image, barrels pointing back toward us on the left of his head."
+   },
+   "pixel": false,
+   "height": 128,
+   "reference": "ref/gunner_turnaround.jpg",
+   "stills": {
+    "se": "raw/gunner_se_still.png",
+    "ne": "raw/gunner_ne_still.png",
+    "s": "raw/gunner_s_still.png",
+    "n": "raw/gunner_n_still.png",
+    "sw": "raw/gunner_sw_still.png",
+    "nw": "raw/gunner_nw_still.png",
+    "e": "raw/gunner_e_still.png",
+    "w": "raw/gunner_w_still.png"
+   },
+   "_w_note": "W is a mirror of E (no image model produced a left profile with the gun on the far shoulder); in W only the gun sits on his left shoulder. Regenerate W if it matters."
+  }
+ }
+}

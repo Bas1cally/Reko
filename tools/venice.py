@@ -34,7 +34,7 @@ from pathlib import Path
 API = "https://api.venice.ai/api/v1"
 ROOT = Path(__file__).resolve().parent.parent
 # resolutions the API accepts where the model list shows none or other spellings (checked with /video/quote)
-DEFAULT_RES = {"minimax-h3-max-turbo-image-to-video": "768P", "minimax-h3-max-image-to-video": "768P",
+DEFAULT_RES = {"flux-3-image-to-video": "720p", "flux-3-first-last-frame-to-video": "720p","minimax-h3-max-turbo-image-to-video": "768P", "minimax-h3-max-image-to-video": "768P",
                "minimax-h3-image-to-video": "768P", "minimax-h3-reference-to-video": "768P",
                "wan-3-0-image-to-video": "480p", "wan-3-0-reference-to-video": "480p",
                "pixverse-c1-image-to-video": "540p"}
@@ -61,15 +61,21 @@ def call(method, path, body=None, auth=True, raw=False):
     if key:                     # otherwise a network secret on the proxy adds it
         headers["Authorization"] = f"Bearer {key}"
     data = json.dumps(body).encode() if body is not None else None
-    req = urllib.request.Request(API + path, data=data, headers=headers, method=method)
-    try:
-        with urllib.request.urlopen(req, timeout=600) as r:
-            ctype, payload = r.headers.get("Content-Type", ""), r.read()
-    except urllib.error.HTTPError as e:
-        detail = e.read().decode(errors="replace")[:2000]
-        if e.code == 401:
-            detail += " (no key reached Venice: add the network secret for api.venice.ai, or set VENICE_API_KEY)"
-        raise SystemExit(f"error: {method} {path} -> HTTP {e.code}: {detail}")
+    for attempt in range(4):    # upstream 502/503s are common and transient: retry with backoff
+        req = urllib.request.Request(API + path, data=data, headers=headers, method=method)
+        try:
+            with urllib.request.urlopen(req, timeout=600) as r:
+                ctype, payload = r.headers.get("Content-Type", ""), r.read()
+            break
+        except urllib.error.HTTPError as e:
+            if e.code in (502, 503, 504) and attempt < 3:
+                print(f"note: {path} -> HTTP {e.code}, retry in {5 * 2 ** attempt}s", file=sys.stderr)
+                time.sleep(5 * 2 ** attempt)
+                continue
+            detail = e.read().decode(errors="replace")[:2000]
+            if e.code == 401:
+                detail += " (no key reached Venice: add the network secret for api.venice.ai, or set VENICE_API_KEY)"
+            raise SystemExit(f"error: {method} {path} -> HTTP {e.code}: {detail}")
     if raw:
         return ctype, payload
     return json.loads(payload)
@@ -87,7 +93,7 @@ def model_spec(model_id):
     return _specs[model_id]
 
 
-def data_url(ref):
+def data_url(ref, max_side=None):
     """A local file path (relative to the repo root or cwd) or an http(s) URL."""
     if ref.startswith(("http://", "https://", "data:")):
         return ref
@@ -97,6 +103,14 @@ def data_url(ref):
     p = Path(ref) if Path(ref).is_file() else ROOT / ref
     if not p.is_file():
         sys.exit(f"error: image not found: {ref}")
+    if max_side:                # references only: smaller payloads, fewer upstream failures
+        from PIL import Image
+        import io
+        im = Image.open(p).convert("RGB")
+        im.thumbnail((max_side, max_side))
+        buf = io.BytesIO()
+        im.save(buf, "JPEG", quality=92)
+        return "data:image/jpeg;base64," + base64.b64encode(buf.getvalue()).decode()
     mime = mimetypes.guess_type(p.name)[0] or "image/png"
     return f"data:{mime};base64," + base64.b64encode(p.read_bytes()).decode()
 
@@ -127,7 +141,7 @@ def still_body(e):
     c = spec["model_spec"].get("constraints", {})
     if p.get("referenceImages"):
         body = {"modelId": e["model"], "prompt": p["prompt"], "output_format": "png",
-                "images": [data_url(r) for r in p["referenceImages"]]}
+                "images": [data_url(r, max_side=1024) for r in p["referenceImages"]]}
         if "aspectRatios" in c:
             body["aspect_ratio"] = aspect(p.get("width", 1024), p.get("height", 1024))
         if "quality" in spec["model_spec"].get("pricing", {}) and p.get("quality"):
@@ -163,8 +177,17 @@ def still_price(e):
 
 def run_stills(a):
     out = Path(a.out)
+    if a.model:
+        global load
+        _load = load
+        load = lambda *x: [(k, dict(e, model=a.model, id=e["id"] + "_" + a.model.split("-")[0]))
+                           for k, e in _load(*x)]
     out.mkdir(parents=True, exist_ok=True)
     for kind, e in load(a.prompts, "stills", a.ids):
+        done = sorted(out.glob(f"{e['id']}_[0-9].*"))
+        if done and not a.force:
+            print(f"{e['id']}: already there ({', '.join(f.name for f in done)}), skip (pass --force to redo)")
+            continue
         path, body = still_body(e)
         n = e["params"].get("numOutputs", 1)
         files = []
@@ -241,6 +264,9 @@ def run_clips(a):
     jobs_path = Path(a.jobs)
     jobs = json.loads(jobs_path.read_text()) if jobs_path.is_file() else {}
     for kind, e in load(a.prompts, "cycles", a.ids):
+        if a.model:             # model test: own job id and file, e.g. gunner_se_walk__wan
+            m = a.model_end if (a.model_end and e["params"].get("endImage")) else a.model
+            e = dict(e, model=m, id=f"{e['id']}__{a.tag or a.model.split('-')[0]}")
         if e["id"] in jobs and not a.force:
             print(f"{e['id']}: already queued ({jobs[e['id']]['queue_id']}), skip (pass --force to re-run)")
             continue
@@ -262,10 +288,17 @@ def run_wait(a):
     jobs_path, out = Path(a.jobs), Path(a.out)
     out.mkdir(parents=True, exist_ok=True)
     jobs = json.loads(jobs_path.read_text())
-    todo = {k: j for k, j in jobs.items() if not j.get("file") and (not a.ids or k in a.ids)}
+    todo = {k: j for k, j in jobs.items() if not j.get("file") and not j.get("failed") and (not a.ids or k in a.ids)}
     while todo:
         for cid, j in list(todo.items()):
-            ctype, payload = call("POST", "/video/retrieve", {"model": j["model"], "queue_id": j["queue_id"]}, raw=True)
+            try:
+                ctype, payload = call("POST", "/video/retrieve", {"model": j["model"], "queue_id": j["queue_id"]}, raw=True)
+            except SystemExit as err:   # provider failure: record it, keep polling the rest
+                j["failed"] = str(err)[:300]
+                jobs_path.write_text(json.dumps(jobs, indent=1))
+                print(f"{cid}: FAILED {err}")
+                del todo[cid]
+                continue
             video = None
             if ctype.startswith("video/"):
                 video = payload
@@ -281,7 +314,10 @@ def run_wait(a):
                 f.write_bytes(video)
                 j["file"] = str(f)
                 jobs_path.write_text(json.dumps(jobs, indent=1))
-                call("POST", "/video/complete", {"model": j["model"], "queue_id": j["queue_id"]})
+                try:            # cleanup only; some models delete the media themselves
+                    call("POST", "/video/complete", {"model": j["model"], "queue_id": j["queue_id"]})
+                except SystemExit:
+                    pass
                 print(f"{cid}: saved {f}")
                 del todo[cid]
         if todo:
@@ -318,9 +354,14 @@ def main():
             s.add_argument("--resolution", help="clip resolution, e.g. 480p, 720p, 768P (model specific)")
         if name == "stills":
             s.add_argument("--out", default=str(ROOT / "raw"))
+            s.add_argument("--force", action="store_true")
+            s.add_argument("--model", help="override the model of every selected request")
         if name == "clips":
             s.add_argument("--jobs", default=str(ROOT / "jobs.json"))
             s.add_argument("--force", action="store_true")
+            s.add_argument("--model", help="test another clip model; job ids and files get a __tag suffix")
+            s.add_argument("--model-end", help="with --model: the model for clips with a pinned end frame")
+            s.add_argument("--tag", help="suffix for --model test runs (default: first word of the model id)")
     s = sub.add_parser("wait")
     s.add_argument("--jobs", default=str(ROOT / "jobs.json"))
     s.add_argument("--out", default=str(ROOT / "clips"))
