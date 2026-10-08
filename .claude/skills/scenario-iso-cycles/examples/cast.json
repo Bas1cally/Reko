@@ -1,0 +1,139 @@
+{
+  "_comment": "The Iso Cycles cast, 8 directions: SE, NE, E, S, N generated, SW, NW, W mirrored. Copy to your project as cast.json and edit. 'stills' (uploaded first-frame asset ids per facing) are left out: add them as you upload, e.g. \"stills\": {\"se\": \"asset_...\", \"ne\": \"asset_...\"}.",
+  "canvas": 960,
+  "fig_frac": 0.58,
+  "base_frac": 0.82,
+  "frames": 8,
+  "cycles": ["walk", "run", "idle", "attack"],
+  "style": "crisp hand-placed pixel art like a 16-bit isometric strategy game, 1px dark outline, limited palette of about 24 colours, soft top-left lighting, chunky readable silhouette",
+  "facings": ["se", "ne", "e", "s", "n"],
+  "heroes": {
+    "golem": {
+      "character": "a massive stone golem. Body built from heavy slate-grey boulders held together by glowing cyan rune lines, a small head sunk between huge rock shoulders with two glowing cyan eyes, moss and small ferns growing on the shoulders, enormous fists as big as its head, thick stubby legs, a few chains wrapped around one forearm. No weapon.",
+      "back": "we see its mossy back and the runes on its spine",
+      "who": "stone golem",
+      "pronoun": "It",
+      "extra": ", heavy stomping steps, moss sways on its shoulders",
+      "idle": "the cyan runes pulse softly and small stones shift on its shoulders",
+      "attack": "ground pound: raises both huge stone fists above its head and slams them down onto the ground in front of it",
+      "back_view": "its mossy back and the glowing runes on its spine",
+      "height": 96,
+      "palette": 28,
+      "ranges": {
+        "walk": [12, 48],
+        "run": [8, 40]
+      },
+      "size_bias": {
+        "e": 1.05
+      }
+    },
+    "orc": {
+      "character": "a hulking orc berserker. Olive green skin, big underbite tusks, black topknot, bare muscular chest with red war paint stripes, fur-trimmed shoulder pad on one side, spiked leather bracers, brown leather kilt with a belt skull, heavy double-bladed battle axe held in both hands in front of the body.",
+      "back": "we see his back and topknot",
+      "who": "orc berserker",
+      "pronoun": "He",
+      "extra": ", battle axe held across the body, topknot bounces",
+      "idle": "his shoulders heave and he tightens his grip on the axe",
+      "attack": "overhead axe chop: lifts the double-bladed axe high above his head and slams it down in front of him",
+      "back_view": "his back, his topknot and the single axe head beside his hip",
+      "height": 96,
+      "palette": 28,
+      "fps_scale": {
+        "s_run": 1.3,
+        "n_run": 1.3
+      },
+      "size_bias": {
+        "s": 1.06,
+        "n": 1.06
+      }
+    },
+    "necro": {
+      "character": "a gaunt necromancer. Long tattered dark teal-grey hooded robe with bone-white trim, a pale skull-like face with glowing green eyes inside the hood, a ribcage pauldron on one shoulder, a tall gnarled staff topped with a small skull and a green flame, bony hands, a belt with hanging vials.",
+      "back": "we see the back of the hood and robe",
+      "who": "hooded necromancer",
+      "pronoun": "He",
+      "extra": ", tattered robe sways, staff held upright",
+      "idle": "the green flame on the staff flickers and the robe hem sways",
+      "attack": "spell cast: raises the skull staff, the green flame flares, then he thrusts the staff forward releasing a short burst of green magic",
+      "back_view": "the back of his hood and robe, and the skull staff upright on the right side",
+      "height": 80,
+      "palette": 24,
+      "turn_notes": {
+        "e": "He holds the tall skull staff upright in front of him, the staff on the right side of the image, its green-flamed skull at the top. The ribcage pauldron sits on the shoulder nearer to us.",
+        "s": "He holds the tall skull staff upright in his left hand, so the staff stands on the right side of the image, its green-flamed skull above his shoulder. The ribcage pauldron is on his right shoulder, on the left side of the image.",
+        "n": "The tall skull staff stands on the right side of the image, held upright beside him, its green-flamed skull visible above his shoulder. The ribcage pauldron is on the shoulder on the right side of the image."
+      },
+      "ranges": {
+        "walk": [12, 48]
+      },
+      "size_bias": {
+        "s": 1.06,
+        "n": 1.06
+      },
+      "fps_scale": {
+        "s_run": 1.3,
+        "n_run": 1.3
+      }
+    },
+    "knight": {
+      "character": "a stout armored knight. Silver plate armor, blue tabard with a small gold cross, red plume on a rounded great helm, brown leather boots and belt, longsword in a scabbard at the hip, small round shield on the back.",
+      "back": "we see the back and the shield",
+      "who": "armored knight",
+      "pronoun": "He",
+      "extra": ", red plume bounces",
+      "idle": "the red plume sways gently",
+      "attack": "sword attack: draws the longsword and swings a wide diagonal slash in front of him",
+      "back_view": "his back, his round shield and the back of his helmet",
+      "height": 64,
+      "palette": 24,
+      "turn_notes": {
+        "e": "The longsword in its scabbard hangs at his hip with the tip pointing back behind him, toward the left of the image. The small round shield is strapped to his back, its edge showing behind his shoulders on the left side of the image.",
+        "s": "The longsword in its scabbard hangs at his hip on the left side of the image. The small round shield is on his back, so from the front only a sliver of its rim shows behind his shoulders.",
+        "n": "The small round wooden shield is strapped to the middle of his back, centred between his shoulders. The longsword in its scabbard hangs at his hip on the left side of the image."
+      },
+      "size_bias": {
+        "s": 1.06,
+        "n": 1.06
+      },
+      "fps_scale": {
+        "s_run": 1.3,
+        "n_run": 1.3
+      },
+      "ranges": {
+        "walk": [16, 28]
+      }
+    },
+    "elf": {
+      "character": "a slender elf ranger. Long pale blonde hair in a braid, pointed ears, forest green hooded cloak over a tan leather tunic, brown leather bracers and tall boots, a quiver of white-fletched arrows on the back, a longbow held in the left hand, a short dagger at the belt.",
+      "back": "we see the back, cloak and quiver",
+      "who": "elf ranger",
+      "pronoun": "She",
+      "extra": ", cloak and braid flow behind",
+      "idle": "the cloak and braid sway gently",
+      "attack": "bow shot: draws an arrow from the quiver, nocks it, pulls the bowstring back and releases",
+      "back_view": "her cloak, her braid and the quiver on her back, with the bow on the right side",
+      "height": 80,
+      "palette": 28,
+      "turn_notes": {
+        "e": "She holds the longbow upright in front of her, on the right side of the image. The quiver of white-fletched arrows on her back shows behind her shoulder on the left side of the image, and the green cloak hangs behind her.",
+        "s": "She holds the longbow upright in her left hand, so the bow stands on the right side of the image. The white fletchings of the quiver on her back peek up behind her shoulder on the left side of the image. Her blonde braid falls over one shoulder.",
+        "n": "The quiver of white-fletched arrows is strapped across her back, its fletchings above her shoulder on the left side of the image. The longbow is held upright beside her on the right side of the image. Her long blonde braid hangs down the middle of her back over the green cloak."
+      },
+      "size_bias": {
+        "s": 1.06,
+        "n": 1.06
+      },
+      "fps_scale": {
+        "s_run": 1.15,
+        "n_run": 1.15
+      },
+      "ranges": {
+        "run": [14, 22]
+      },
+      "attack_facing": {
+        "s": "bow shot aimed straight at the camera: she raises the longbow upright in front of the middle of her body, nocks an arrow that points directly at the viewer (we see the arrow tip head-on, not from the side), pulls the string straight back toward her chin and releases the arrow straight toward us. Her shoulders stay square to the camera the whole time; she never turns sideways to aim",
+        "n": "bow shot aimed straight away from the camera: she raises the longbow upright in front of her body so its upper and lower tips show above and below her shoulders from behind, pulls the string straight back toward her face with her elbow raised behind her head, and releases the arrow straight up the screen, away from us. Her back stays square to the camera the whole time; she never turns sideways to aim"
+      }
+    }
+  }
+}
