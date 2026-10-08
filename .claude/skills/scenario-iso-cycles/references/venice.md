@@ -5,9 +5,11 @@ only). Everything local (`reframe.py`, `make_prompts.py`, `process.py`, `compass
 
 ## Key
 
-`VENICE_API_KEY` in the environment, or `VENICE_API_KEY=...` in `.env` at the repo root. `.env` is
-git-ignored: never commit a key, never paste it into a prompt, a commit message or a file in the repo.
-In a Claude Code cloud session, set it as an environment variable of the environment.
+In a Claude Code cloud session: a network secret (type Bearer) for `api.venice.ai`; the proxy adds the
+`Authorization` header and `tools/venice.py` sends none of its own. Locally: `VENICE_API_KEY` in the
+environment, or `VENICE_API_KEY=...` in `.env` at the repo root (git-ignored). Never commit a key,
+never paste it into a prompt, a commit message or a file in the repo. `/models` and `/video/quote`
+need no key at all.
 
 ## What replaces what
 
@@ -24,14 +26,28 @@ Stills without references and turnarounds need different model ids (an image mod
 model, e.g. `gpt-image-2` and `gpt-image-2-edit`). Run `make_prompts.py` once per kind, or edit the
 `model` field of the turnaround entries.
 
-## Model picks (October 2026, check `models` again)
+## Model picks (October 2026, check `models` and `quote` again)
 
-- Stills: a GPT Image model at `quality: high` (as in the production); turnarounds: its `-edit` twin.
-- Clips: `kling-v3-standard-image-to-video` has 3 s and 5 s and audio that can be switched off, the
-  closest match to the production's Kling. Square output follows the square first frame (the model
-  lists no aspect ratios). Whether it honours `end_image_url` is not in the model list: check the
-  first 5 s clip with a pinned end frame (back run, side walk) before queueing the rest. If it ignores
-  it, try a model built for it (`flux-3-first-last-frame-to-video`, `pixverse-c1-transition`).
+- Stills: `gpt-image-2-5-sunburst` at `quality: high` ($0.07 per image at 1K, about a quarter of
+  `gpt-image-2`); turnarounds: `gpt-image-2-5-sunburst-edit` ($0.08). Check the first still for
+  layout adherence (two figures, flat magenta, one baseline) before drawing the rest with it.
+- Clips, quoted per hero (20 clips, 8 directions, audio off):
+
+  | model                                  | per clip            | per hero | note                        |
+  | -------------------------------------- | ------------------- | -------- | --------------------------- |
+  | `minimax-h3-max-turbo-image-to-video`  | $0.14 (5 s, 768P)   | $2.80    | cheapest; first pick to test |
+  | `wan-3-0-image-to-video`               | $0.33 (5 s, 480p)   | $6.60    | 2 s or 5 s only             |
+  | `kling-v3-standard-image-to-video`     | $0.28 / $0.46 (3/5 s) | $6.86  | the production's family     |
+
+  MiniMax and Wan have no 3 s: every clip runs 5 s. That is fine for the loop search (it takes the
+  middle and ranges are in frames), but the "no end frame on 3 s walks and runs" rule does not exist
+  there; leave walk/run end frames unpinned as written and check the first clips. Resolutions the
+  model list does not show are in `DEFAULT_RES` in `tools/venice.py` (MiniMax wants `768P`).
+- Use **image-to-video**, not reference-to-video, for cycles: the first frame fixes pose, size and
+  position, which the loop search, size matching and the shared canvas rely on. R2V keeps identity
+  but not the framing.
+- Whether a model honours `end_image_url` is not in the model list: check the first 5 s clip with a
+  pinned end frame (back run, side walk) before queueing the rest.
 
 ## Order of work
 

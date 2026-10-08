@@ -6,8 +6,10 @@ Venice instead of the Scenario MCP. In cast.json, "stills" hold local file
 paths (e.g. "raw/knight_se.png") instead of Scenario asset ids; this client
 sends them as data URLs.
 
-API key: environment variable VENICE_API_KEY, or a line VENICE_API_KEY=... in
-.env at the repo root (.env is git-ignored; never commit the key).
+API key: in a Claude Code cloud session store it as a network secret for
+api.venice.ai (Bearer); the proxy adds the Authorization header, so no key is
+needed here. Locally: environment variable VENICE_API_KEY, or a line
+VENICE_API_KEY=... in .env at the repo root (.env is git-ignored; never commit it).
 
 Usage:
   venice.py models image|video|edit [--grep TEXT]   list models (no key needed)
@@ -31,6 +33,12 @@ from pathlib import Path
 
 API = "https://api.venice.ai/api/v1"
 ROOT = Path(__file__).resolve().parent.parent
+# resolutions the API accepts where the model list shows none or other spellings (checked with /video/quote)
+DEFAULT_RES = {"minimax-h3-max-turbo-image-to-video": "768P", "minimax-h3-max-image-to-video": "768P",
+               "minimax-h3-image-to-video": "768P", "minimax-h3-reference-to-video": "768P",
+               "wan-3-0-image-to-video": "480p", "wan-3-0-reference-to-video": "480p",
+               "pixverse-c1-image-to-video": "540p"}
+RESOLUTION = None               # --resolution overrides
 MODEL_TYPES = {"image": "image", "video": "video", "edit": "inpaint"}
 
 
@@ -43,14 +51,15 @@ def api_key(required=True):
                 key = line.split("=", 1)[1].strip().strip('"').strip("'")
     if required and not key:
         sys.exit("error: no API key. Set VENICE_API_KEY or put VENICE_API_KEY=... in .env")
-    return key
+    return key or None
 
 
 def call(method, path, body=None, auth=True, raw=False):
     """One API call. Returns (content_type, bytes) when raw, else parsed JSON."""
     headers = {"Content-Type": "application/json"}
-    if auth:
-        headers["Authorization"] = f"Bearer {api_key()}"
+    key = api_key(required=False) if auth else None
+    if key:                     # otherwise a network secret on the proxy adds it
+        headers["Authorization"] = f"Bearer {key}"
     data = json.dumps(body).encode() if body is not None else None
     req = urllib.request.Request(API + path, data=data, headers=headers, method=method)
     try:
@@ -58,6 +67,8 @@ def call(method, path, body=None, auth=True, raw=False):
             ctype, payload = r.headers.get("Content-Type", ""), r.read()
     except urllib.error.HTTPError as e:
         detail = e.read().decode(errors="replace")[:2000]
+        if e.code == 401:
+            detail += " (no key reached Venice: add the network secret for api.venice.ai, or set VENICE_API_KEY)"
         raise SystemExit(f"error: {method} {path} -> HTTP {e.code}: {detail}")
     if raw:
         return ctype, payload
@@ -173,24 +184,32 @@ def run_stills(a):
 
 
 # ---------- clips ----------
-def clip_body(e):
+def clip_body(e, images=True):
     p, spec = e["params"], model_spec(e["model"])
     c = spec["model_spec"].get("constraints", {})
     dur = str(p.get("duration", "5")).rstrip("s") + "s"
     durs = c.get("durations", [])
     if durs and dur not in durs:
-        alt = min(durs, key=lambda x: abs(float(x.rstrip("s")) - float(dur.rstrip("s"))))
-        print(f"note: {e['id']}: {e['model']} has no {dur}, using {alt}", file=sys.stderr)
+        secs = lambda x: float(x.rstrip("s"))
+        longer = [x for x in durs if x[0].isdigit() and secs(x) >= secs(dur)]
+        alt = min(longer, key=secs) if longer else max((x for x in durs if x[0].isdigit()), key=secs)
+        if images:
+            print(f"note: {e['id']}: {e['model']} has no {dur}, using {alt}", file=sys.stderr)
         dur = alt
-    body = {"model": e["model"], "prompt": p["prompt"], "duration": dur, "image_url": data_url(p["startImage"])}
+    body = {"model": e["model"], "prompt": p["prompt"], "duration": dur}
+    if images:                  # a quote needs no images
+        body["image_url"] = data_url(p["startImage"])
     if p.get("negativePrompt"):
         body["negative_prompt"] = p["negativePrompt"]
-    if p.get("endImage"):
+    if p.get("endImage") and images:
         body["end_image_url"] = data_url(p["endImage"])
     if c.get("aspect_ratios"):
         body["aspect_ratio"] = p.get("aspectRatio", "1:1") if p.get("aspectRatio", "1:1") in c["aspect_ratios"] else c["aspect_ratios"][0]
-    if c.get("resolutions"):
-        body["resolution"] = "720p" if "720p" in c["resolutions"] else c["resolutions"][0]
+    res = RESOLUTION or DEFAULT_RES.get(e["model"])
+    if not res and c.get("resolutions"):
+        res = "720p" if "720p" in c["resolutions"] else c["resolutions"][-1]
+    if res:
+        body["resolution"] = res
     if c.get("audio_configurable"):
         body["audio"] = bool(p.get("generateAudio", False))
     return body
@@ -208,7 +227,7 @@ def run_quote(a):
             price = still_price(e)
             label = f"{e['model']} x{e['params'].get('numOutputs', 1)}"
         else:
-            b = clip_body(e)
+            b = clip_body(e, images=False)
             sig = (b["model"], b["duration"], b.get("resolution"), b.get("audio"))
             if sig not in seen:
                 seen[sig] = clip_quote(b)
@@ -295,6 +314,8 @@ def main():
         s.add_argument("--ids", type=lambda v: set(v.split(",")))
         if name == "quote":
             s.add_argument("--only", choices=["stills", "cycles"])
+        if name in ("quote", "clips"):
+            s.add_argument("--resolution", help="clip resolution, e.g. 480p, 720p, 768P (model specific)")
         if name == "stills":
             s.add_argument("--out", default=str(ROOT / "raw"))
         if name == "clips":
@@ -309,6 +330,8 @@ def main():
         ap.print_help(sys.stderr)
         sys.exit(2)
     a = ap.parse_args()
+    global RESOLUTION
+    RESOLUTION = getattr(a, "resolution", None)
     {"models": run_models, "quote": run_quote, "stills": run_stills, "clips": run_clips, "wait": run_wait}[a.cmd](a)
 
 

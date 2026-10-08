@@ -18,7 +18,7 @@ Arbeits-Repo für Figuren-Sprites (BoF3-Projekt): Standbilder, Clips und fertige
 
 ## API-Schlüssel
 
-`cp .env.example .env` und `VENICE_API_KEY=...` eintragen, oder die Umgebungsvariable setzen.
+Cloud-Sitzung: als Network Secret (Bearer) für `api.venice.ai` hinterlegen, der Proxy setzt den Header. Lokal: `cp .env.example .env` und `VENICE_API_KEY=...` eintragen.
 `.env` ist in `.gitignore`: der Schlüssel kommt nie ins Repo.
 
 ## Kurzablauf
@@ -26,7 +26,7 @@ Arbeits-Repo für Figuren-Sprites (BoF3-Projekt): Standbilder, Clips und fertige
 ```bash
 S=.claude/skills/scenario-iso-cycles/scripts
 python3 tools/venice.py models video --grep kling            # Modelle ansehen (ohne Schlüssel)
-python3 $S/make_prompts.py cast.json --still-model gpt-image-2 --clip-model kling-v3-standard-image-to-video
+python3 $S/make_prompts.py cast.json --still-model gpt-image-2-5-sunburst --clip-model minimax-h3-max-turbo-image-to-video
 python3 tools/venice.py quote prompts.json                   # Preis, nichts wird ausgegeben
 python3 tools/venice.py stills prompts.json --ids held_still # Standbild, 2 Varianten nach raw/
 python3 $S/reframe.py held raw/held_still_1.png --facings se,ne --out raw
