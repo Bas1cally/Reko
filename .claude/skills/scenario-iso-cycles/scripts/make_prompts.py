@@ -212,6 +212,12 @@ def cycle_request(hid, d, facing, cy, still):
         # walk/run makes the model start and stop the gait inside the clip
         if cy not in ("walk", "run"):
             params["endImage"] = still
+    neg = params["negativePrompt"]
+    if not d.get("pixel", True):            # HD / rendered heroes: "3D render" in the negative fights their own style
+        neg = neg.replace(", 3D render", "").replace("3D render, ", "")
+    # per-hero "negative": always appended; "negative_attack": appended to the attack only
+    extra = [d.get("negative")] + ([d.get("negative_attack")] if cy == "attack" else [])
+    params["negativePrompt"] = ", ".join([neg] + [x for x in extra if x])
     params.update(aspectRatio="1:1", generateAudio=False)
     return {"id": f"{hid}_{facing}_{cy}", "model": CLIP_MODEL, "params": params}
 
