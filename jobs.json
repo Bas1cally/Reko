@@ -70,5 +70,13 @@
   "duration": "5s",
   "queued_at": "2026-10-08T13:32:33",
   "failed": "error: POST /video/retrieve -> HTTP 422: {\"error\":\"Video generation failed due to a provider-side error. Credits have been refunded.\",\"credits_refunded\":true}"
+ },
+ "gunner_se_attack__v2": {
+  "model": "minimax-h3-max-turbo-image-to-video",
+  "queue_id": "01a11bd6-4ed3-7e3b-8d10-d92e71844ec5",
+  "download_url": null,
+  "duration": "5s",
+  "queued_at": "2026-10-08T14:06:32",
+  "file": "/home/user/Reko/clips/gunner_se_attack__v2.mp4"
  }
 }
